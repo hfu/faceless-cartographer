@@ -1,0 +1,26 @@
+[Unit]
+Description=faceless-cartographer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Adjust User/WorkingDirectory to match the account/checkout on the Pi.
+User=pi
+WorkingDirectory=/home/pi/faceless-cartographer
+Environment=PORT=3000
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm run start
+Restart=on-failure
+RestartSec=5
+# Hardening (safe defaults for a small single-purpose service). If the D8
+# LLM explanation feature (CLI call to `claude -p`) is implemented later,
+# revisit this: the `claude` CLI may need read access to its own config/auth
+# directory (e.g. ~/.claude), which ProtectSystem=strict would block.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/pi/faceless-cartographer
+
+[Install]
+WantedBy=multi-user.target

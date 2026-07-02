@@ -14,6 +14,8 @@
 | [D6](#d6-初期表示範囲のフォールバック順) | 初期表示範囲のフォールバック順 | Accepted | 2026-07-02 |
 | [D7](#d7-依存パッケージのバージョンは学習知識ではなく実際のレジストリで確認する) | 依存パッケージのバージョンは学習知識ではなく実際のレジストリで確認する | Accepted | 2026-07-02 |
 | [D8](#d8-llm説明パネルは中核パイプラインから分離しワンショットcli呼び出しにする) | LLM説明パネルは中核パイプラインから分離し、ワンショットCLI呼び出しにする | Proposed(未実装) | 2026-07-02 |
+| [D9](#d9-デプロイ先は自己ホストのraspberry-pi-4b--cloudflared) | デプロイ先は自己ホストの Raspberry Pi 4B + cloudflared | Accepted | 2026-07-02 |
+| [D10](#d10-express-から-hono-への移行は今回見送る) | Express から Hono への移行は今回見送る | Rejected(将来再検討あり) | 2026-07-02 |
 
 ---
 
@@ -97,4 +99,24 @@
 
 **Decision(方針のみ、実装は未着手)**: 実装する場合、LLM呼び出しはワンショットのコマンドライン呼び出しとして行う。デフォルトのコマンドは `claude -p` とする。中核パイプライン(`mapIntent.ts`/`catalog.ts`/`style.ts`)には組み込まず、それらが無くても地図の描画自体は成立する分離された追加機能として実装する。
 
-**Consequences**: 未実装。着手する際は、(a) `POST /` のレスポンスタイムにCLIプロセスの起動コストがどう影響するか、(b) CLI呼び出し失敗時に地図描画自体は成功させる分離をどう保つか、(c) サーバー環境に `claude` CLIが存在しない場合のフォールバック、を検討する必要がある。
+**Consequences**: 未実装。着手する際は、(a) `POST /` のレスポンスタイムにCLIプロセスの起動コストがどう影響するか、(b) CLI呼び出し失敗時に地図描画自体は成功させる分離をどう保つか、(c) サーバー環境に `claude` CLIが存在しない場合のフォールバック、を検討する必要がある。D9(デプロイ先)の決定により、実行環境は通常のLinuxプロセス(`child_process` が使える)であることが確定したため、この方針を変更する必要はなくなった。
+
+## D9: デプロイ先は自己ホストの Raspberry Pi 4B + cloudflared
+
+**Status**: Accepted
+
+**Context**: デプロイ先の検討にあたり、Cloudflare Workers 等のエッジランタイムへのデプロイも選択肢として検討した(D10参照)。エッジは無料枠が大きくサーバー管理が不要という利点があるが、D8 で決めた「LLM呼び出しはワンショットのCLIサブプロセス(`claude -p`)」という方針とは根本的に非互換(エッジランタイムには `child_process` もファイルシステムも無い)。
+
+**Decision**: デプロイ先は自己ホストの Raspberry Pi 4B とする。`cloudflared`(Cloudflare Tunnel)経由で `cartographer.optgeo.org` として公開する。ポートを外部に開放する必要がなく、TLS終端は cloudflared 側が担う。プロセス管理は systemd で行う(`deploy/faceless-cartographer.service`)。デプロイ手順は `deploy/README.md` に記録した。
+
+**Consequences**: D8 のCLIサブプロセス方式をそのまま維持できる(通常のLinuxプロセスなので `child_process` が普通に使える)。クラウドの月額費用が発生しない。一方で、可用性・スケーラビリティは自宅サーバーの制約を受ける(電源・回線・ハードウェア故障等はエッジやマネージドPaaSに比べて運用者の負担になる)。依存パッケージ(express, js-yaml, tsx 等)はいずれも Pure JS またはaarch64向けのプリビルドバイナリを持つため、Raspberry Pi (aarch64) 上での追加対応は不要と判断した(実機での動作確認は運用者側で行う)。CI/CDによる自動デプロイは v1 時点では組んでおらず、`deploy/README.md` に記載の手動手順(`git pull` → `npm install` → `systemctl restart`)で更新する。
+
+## D10: Express から Hono への移行は今回見送る
+
+**Status**: Rejected(将来再検討の余地あり)
+
+**Context**: Hono はWeb Standardsベースで書かれており、Node/Cloudflare Workers/Deno/Bunなど複数ランタイムで同一コードが動く。当初、デプロイ先としてCloudflare Workersのようなエッジランタイムを検討していたため、移行の是非を検討した。現在のExpress利用は薄く(ルート2つ、ミドルウェア2つ)、テストもExpressのルーティング自体には依存していないため、移行コスト自体は小さいと分かった。
+
+**Decision**: D9 でデプロイ先が Raspberry Pi 上の通常の Node プロセスに決まったため、Hono最大の利点(ランタイム横断・エッジ対応)を活かす場面が無くなった。Express は Pure JS でネイティブ依存も無く、aarch64上で問題なく動作する。移行によるDX上の細かな利点はあるが、「必要になるまで抽象化・移行はしない」という原則に従い、今回は見送る。
+
+**Consequences**: 現状の `src/server.ts` はExpressのまま。将来、Cartographerの一部(特にLLMに依存しない中核描画パス)だけをエッジにも展開したくなった場合は、この判断を再検討する。その際も `src/mapIntent.ts`/`src/catalog.ts`/`src/style.ts` はExpress/Honoいずれにも依存しない環境非依存の実装になっているため、書き換えが必要なのは `src/server.ts`/`src/render.ts` の薄い層のみで済む見込み。

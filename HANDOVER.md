@@ -36,7 +36,9 @@ Cartographer は意図的に「faceless」である: 公開エンドポイント
 - 実装は Express + TypeScript(`tsx` で直接実行、ビルドステップなし)。`src/mapIntent.ts`(パース・バリデーション)→ `src/catalog.ts`(カタログ解決)→ `src/style.ts`(MapLibreスタイル構築)という決定的なパイプラインを、`src/server.ts`/`src/render.ts` が `GET /`・`POST /` として提供する。
 - `hfu/layers-martin` の実カタログ(`https://hfu.github.io/layers-martin/catalog`)に対して実際に動作確認済み。土砂災害警戒区域の検証済み例(標準地図 + 警戒区域3件 + 任意レイヤー1件)が、実際にブラウザで正しく描画されることを Playwright のスクリーンショットで確認した(青い警戒区域が標準地図の上に正しく重なる)。この例は `src/render.ts` の `EXAMPLE_MAP_INTENT` として初期フォームにそのまま埋め込まれている。
 - テスト17件(`src/*.test.ts`)全パス。`src/catalog.test.ts` は実際に `layers-martin` の生カタログへHTTPで問い合わせる統合テストで、モックは使っていない。CI(`.github/workflows/ci.yml`)は typecheck + test を実行し green。
-- 未着手: デプロイ先の選定(まだどこにもホストしていない)。LLMによる自然文の説明パネル(方針だけ決定: ブラウザからは呼び出せないため、実装する場合はワンショットでCLIを呼び出す形にする。デフォルトは `claude -p`。実装は未着手)。
+- デプロイ先は自己ホストの Raspberry Pi 4B + cloudflared([D9](DECISIONS.md#d9-デプロイ先は自己ホストのraspberry-pi-4b--cloudflared)、`cartographer.optgeo.org`)に決定。systemdユニットとデプロイ手順を `deploy/` に用意した(Pi実機での適用は運用者側の作業)。まだ実際にはデプロイされていない。
+- 未着手: LLMによる自然文の説明パネル(方針だけ決定: ワンショットでCLIを呼び出す形にする。デフォルトは `claude -p`。実装は未着手。D9によりRaspberry Pi上の通常プロセスで動くことが確定したため、この方針のまま実装できる)。
+- Express から Hono への移行は検討の上で見送った([D10](DECISIONS.md#d10-express-から-hono-への移行は今回見送る))。デプロイ先がエッジランタイムでなくなったため、移行の主な動機が無くなったため。
 
 具体的な設計判断とその理由は [DECISIONS.md](DECISIONS.md) を参照。
 

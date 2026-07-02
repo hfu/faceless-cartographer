@@ -44,6 +44,10 @@ npm run typecheck
 npm test            # includes integration tests against the live layers-martin catalog
 ```
 
+## Deployment
+
+Self-hosted on a Raspberry Pi 4B behind `cloudflared`, at `cartographer.optgeo.org` (see [`DECISIONS.md`](DECISIONS.md) D9). Setup instructions and a systemd unit template are in [`deploy/`](deploy/). Not yet actually deployed as of this writing.
+
 ## Known limitations (v1)
 
 - Vector tile (`.pbf`/`.mvt`) sources are added to the MapLibre style but no layer is rendered for them, since `layers-martin`'s TileJSON doesn't include `vector_layers` (can't be recovered from `layers.txt` alone). Not currently exercised by the reference catalog, which has zero vector layers as of 2026-07-02. See [`DECISIONS.md`](DECISIONS.md) D5.

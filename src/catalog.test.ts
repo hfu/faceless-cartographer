@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resolveLayers } from './catalog.ts';
 import type { MapIntent } from './types.ts';
 
@@ -49,4 +49,46 @@ describe('resolveLayers (integration, live layers-martin catalog)', () => {
     expect(missing).toEqual(['this_source_id_does_not_exist_12345']);
     expect(resolved.map((r) => r.source_id)).toEqual(['std']);
   }, 20000);
+});
+
+describe('resolveLayers (permissive input, mocked catalog)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // Cartographer should be liberal in what it accepts (Postel's law, per
+  // project direction): a tilejson version other than "3.x", or the field
+  // missing entirely, must not by itself make an otherwise-usable document
+  // ("tiles" is a non-empty array of URL strings) unresolvable.
+  it('resolves a document with an unexpected/missing tilejson version, as long as "tiles" is usable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ tilejson: '2.2.0', tiles: ['https://example.org/{z}/{x}/{y}.png'] })
+      }))
+    );
+
+    const intent = intentWith(['legacy_layer']);
+    const { resolved, missing } = await resolveLayers(intent);
+
+    expect(missing).toEqual([]);
+    expect(resolved.map((r) => r.source_id)).toEqual(['legacy_layer']);
+  });
+
+  it('still rejects a response with no usable "tiles" array', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ tilejson: '3.0.0' })
+      }))
+    );
+
+    const intent = intentWith(['no_tiles_layer']);
+    const { resolved, missing } = await resolveLayers(intent);
+
+    expect(resolved).toEqual([]);
+    expect(missing).toEqual(['no_tiles_layer']);
+  });
 });

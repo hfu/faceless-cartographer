@@ -17,6 +17,7 @@
 | [D9](#d9-デプロイ先は自己ホストのraspberry-pi-4b--cloudflared) | デプロイ先は自己ホストの Raspberry Pi 4B + cloudflared | Accepted | 2026-07-02 |
 | [D10](#d10-express-から-hono-への移行は今回見送る) | Express から Hono への移行は今回見送る | Rejected(将来再検討あり) | 2026-07-02 |
 | [D11](#d11-地図全面レイアウトとcopy-map-intent時のrender_hints反映) | 地図全面レイアウトと Copy Map Intent 時の `render_hints` 反映 | Accepted | 2026-07-02 |
+| [D12](#d12-入力には寛容出力には厳格3リポジトリ間の整合性確認で見つけたギャップの是正) | 入力には寛容、出力には厳格(3リポジトリ間の整合性確認で見つけたギャップの是正) | Accepted | 2026-07-03 |
 
 ---
 
@@ -136,6 +137,22 @@
 - 「Copy Map Intent」クリック時、js-yaml をクライアント側でも読み込み(ESM importでCDNから、`unpkg.com/js-yaml@.../dist/js-yaml.mjs`)、元の Map Intent をパースした上で、その時点の `map.getCenter()`/`getZoom()`/`getBearing()`/`getPitch()` を `render_hints` として上書き・追記してからシリアライズし、クリップボードにコピーするようにした。これは `map-intent-vnext.md` §5 が `render_hints` の用途として明記している「実用上の再オープンのため」に沿う挙動である。YAMLの読み書きに失敗した場合は、元のテキストをそのままコピーする安全側の挙動にフォールバックする。
 
 **Consequences**: js-yaml 5.x はブラウザ向けのUMDバンドル(v3/v4にあった `dist/js-yaml.min.js` 相当)を廃止しており、ESM (`dist/js-yaml.mjs`) のみが配布されている。そのため、地図描画ページのスクリプトは `<script type="module">` に変更した(MapLibre GL JS自体は引き続きグローバル変数を公開する従来型の `<script>` タグで読み込み、モジュールスクリプトからは `maplibregl` グローバルとしてそのままアクセスしている)。Playwrightによる実ブラウザ確認で、パン・ズーム後にCopy Map Intentを押すと、実際の座標・ズームが `render_hints` に正しく反映されることを確認済み。フォームページ(`GET /`)のレイアウトは今回変更していない。
+
+## D12: 入力には寛容、出力には厳格(3リポジトリ間の整合性確認で見つけたギャップの是正)
+
+**Status**: Accepted
+
+**Context**: `faceless-cartographer`/`hfu/layers-martin`/`unopengis/staccato-spec` の3リポジトリ間の整合性を確認したところ、以下が見つかった。
+
+1. `map-intent-vnext.md` §6-5 が定める「`sharing_policy.url_share` は faceless 構成では SHOULD false」というルールを一切チェックしていなかった。
+2. `src/catalog.ts` の TileJSON 検証が「`tilejson` フィールドが `"3."` で始まるか」を要求しており、これはCartographerの設計方針(「入力には寛容、出力には厳格」)に反する厳しすぎる実装だった。バージョン文字列が想定と違うだけで、実際には `tiles` 配列があり十分に描画可能なドキュメントまで `missing` 扱いにしてしまう。
+
+**Decision**:
+
+- `sharing_policy.url_share: true` は拒否せず(SHOULDであってMUSTではないため)、その旨をパネルに警告として表示するだけに留める。
+- `src/catalog.ts` の TileJSON 判定は `tilejson` フィールドの値を見ない。`tiles` が1件以上の文字列を含む配列であることだけを条件とする。これにより、`tilejson: "2.2.0"` のような未知のバージョンや `tilejson` フィールド自体が無いドキュメントも、`tiles` さえあれば描画対象として解決する。一方で `tiles` が無い・空・文字列でない場合は引き続き `missing` として扱う(最低限「描画に使える形か」は要求する)。
+
+**Consequences**: `src/catalog.test.ts` に、実ネットワークを使わない `vi.stubGlobal('fetch', ...)` によるモックテストを追加し、(a) `tilejson: "2.2.0"` でも `tiles` があれば解決されること、(b) `tiles` が無ければ引き続き `missing` になることの両方を確認した(実際の `layers-martin` は常に `tilejson: "3.0.0"` を返すため、この分岐は実データでは検証できない)。この方針は、Cartographerが将来 `layers-martin` 以外の(TileJSONバージョンの書き方が微妙に異なるかもしれない)Libraryカタログとも組み合わされることを見越したものでもある。
 
 ## バックログ(未決定・保留)
 

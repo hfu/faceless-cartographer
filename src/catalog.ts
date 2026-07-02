@@ -21,12 +21,21 @@ async function fetchTileJson(catalog: CatalogEntry, sourceId: string): Promise<T
     const res = await fetch(`${base}/${sourceId}`);
     if (!res.ok) return null;
     const data = (await res.json()) as unknown;
-    if (
-      data !== null &&
-      typeof data === 'object' &&
-      typeof (data as Record<string, unknown>).tilejson === 'string' &&
-      Array.isArray((data as Record<string, unknown>).tiles)
-    ) {
+    if (data === null || typeof data !== 'object') return null;
+
+    const record = data as Record<string, unknown>;
+    // Be liberal in what's accepted here (Postel's law, per direction from
+    // the project owner: Cartographer should be permissive on input, strict
+    // on output). TileJSON 3.x is the canonical model this pipeline is built
+    // against (catalog-integration.md §10) and is what every real catalog in
+    // this ecosystem emits, but a document that merely has a different
+    // "tilejson" version string still has everything actually needed to
+    // build a MapLibre source (a "tiles" URL array) -- so it's still
+    // resolved rather than treated as missing. Only requiring "tiles" to be
+    // a non-empty array of strings (not gating on "tilejson" at all) filters
+    // out responses that clearly aren't tile documents (e.g. an error page's
+    // JSON body) without rejecting merely-differently-versioned ones.
+    if (Array.isArray(record.tiles) && record.tiles.length > 0 && record.tiles.every((t) => typeof t === 'string')) {
       return data as TileJson;
     }
     return null;

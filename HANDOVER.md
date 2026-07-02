@@ -31,11 +31,15 @@ Cartographer は意図的に「faceless」である: 公開エンドポイント
 
 この方針から、本実装のコアパイプライン(`src/mapIntent.ts` → `src/catalog.ts` → `src/style.ts`)はLLMに依存しない。将来的にLLMによる自然文の説明パネルを追加する可能性はあるが、それは分離可能なオプション機能として扱う(下記「現在の状態」参照)。
 
+### 入力には寛容に、出力には厳格に(Postel's law)
+
+Cartographer は複数の Staff・複数の Library カタログと組み合わされる前提の、エコシステムの結節点である。そのため、Map Intent や TileJSON の受け取り側では過度に厳格な検証をしない: 例えば TileJSON の `tilejson` フィールドがバージョン文字列として想定外でも、`tiles` 配列が実際に使える形であれば描画する([D12](DECISIONS.md#d12-入力には寛容出力には厳格3リポジトリ間の整合性確認で見つけたギャップの是正))。spec上 SHOULD(MUSTでない)の規定に反する Map Intent(例: `sharing_policy.url_share: true`)も、拒否はせず警告に留めて処理を続ける。一方で、Cartographer 自身が出す HTML・ヘッダー(`Referrer-Policy` 等)や、コピーする Map Intent の形式は spec に厳密に従う。
+
 ## 現在の状態(2026-07-02 時点)
 
 - 実装は Express + TypeScript(`tsx` で直接実行、ビルドステップなし)。`src/mapIntent.ts`(パース・バリデーション)→ `src/catalog.ts`(カタログ解決)→ `src/style.ts`(MapLibreスタイル構築)という決定的なパイプラインを、`src/server.ts`/`src/render.ts` が `GET /`・`POST /` として提供する。
 - `hfu/layers-martin` の実カタログ(`https://hfu.github.io/layers-martin/catalog`)に対して実際に動作確認済み。土砂災害警戒区域の検証済み例(標準地図 + 警戒区域3件 + 任意レイヤー1件)が、実際にブラウザで正しく描画されることを Playwright のスクリーンショットで確認した(青い警戒区域が標準地図の上に正しく重なる)。この例は `src/render.ts` の `EXAMPLE_MAP_INTENT` として初期フォームにそのまま埋め込まれている。
-- テスト17件(`src/*.test.ts`)全パス。`src/catalog.test.ts` は実際に `layers-martin` の生カタログへHTTPで問い合わせる統合テストで、モックは使っていない。CI(`.github/workflows/ci.yml`)は typecheck + test を実行し green。
+- テスト19件(`src/*.test.ts`)全パス。`src/catalog.test.ts` は実際に `layers-martin` の生カタログへHTTPで問い合わせる統合テストが中心だが、寛容な入力受け入れ(D12)の検証だけは `vi.stubGlobal` によるモックを使っている(実際の `layers-martin` は常に `tilejson: "3.0.0"` を返すため、非対応バージョンのケースは実データでは再現できない)。CI(`.github/workflows/ci.yml`)は typecheck + test を実行し green。
 - デプロイ先は自己ホストの Raspberry Pi 4B + cloudflared([D9](DECISIONS.md#d9-デプロイ先は自己ホストのraspberry-pi-4b--cloudflared)、`cartographer.optgeo.org`)に決定。systemdユニットとデプロイ手順を `deploy/` に用意した(Pi実機での適用は運用者側の作業)。まだ実際にはデプロイされていない。
 - 未着手: LLMによる自然文の説明パネル(方針だけ決定: ワンショットでCLIを呼び出す形にする。デフォルトは `claude -p`。実装は未着手。D9によりRaspberry Pi上の通常プロセスで動くことが確定したため、この方針のまま実装できる)。
 - バックログ: 画面上に凡例(legend)が出ない問題。`layers-martin` 側の凡例情報が `legendUrl`/`html`内埋め込み/欠落と一貫していないため、すぐには解決しにくい。方向性は [DECISIONS.md](DECISIONS.md) の「バックログ」節を参照。

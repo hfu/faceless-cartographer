@@ -100,8 +100,9 @@ export function renderMapPage(opts: {
   resolved: ResolvedLayer[];
   missing: string[];
   unrenderable: string[];
+  urlShareWarning: boolean;
 }): string {
-  const { rawIntent, intent, view, style, resolved, missing, unrenderable } = opts;
+  const { rawIntent, intent, view, style, resolved, missing, unrenderable, urlShareWarning } = opts;
 
   const missingNotice =
     missing.length > 0
@@ -113,6 +114,9 @@ export function renderMapPage(opts: {
           .map(escapeHtml)
           .join(', ')}(vector_layers が catalog 側に無く、描画に必要なスタイル情報を復元できません)</div>`
       : '';
+  const urlShareNotice = urlShareWarning
+    ? `<div class="notice">この Map Intent は <code>sharing_policy.url_share: true</code> を指定していますが、この Cartographer は faceless 構成(URLに状態を持たせない)で動作しているため無視されます。共有は Map Intent のテキスト自体で行ってください。</div>`
+    : '';
 
   const optionalLayers = resolved.filter((r) => !r.required);
   const toggles = optionalLayers
@@ -168,6 +172,7 @@ export function renderMapPage(opts: {
   <p>${escapeHtml(intent.goal)}</p>
   ${missingNotice}
   ${unrenderableNotice}
+  ${urlShareNotice}
   ${optionalLayers.length > 0 ? `<div class="layers"><strong>任意レイヤー</strong>${toggles}</div>` : ''}
   <div class="actions">
     <button id="copy-intent" type="button">Copy Map Intent</button>

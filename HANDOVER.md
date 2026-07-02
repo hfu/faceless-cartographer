@@ -39,6 +39,7 @@ Cartographer は意図的に「faceless」である: 公開エンドポイント
 - デプロイ先は自己ホストの Raspberry Pi 4B + cloudflared([D9](DECISIONS.md#d9-デプロイ先は自己ホストのraspberry-pi-4b--cloudflared)、`cartographer.optgeo.org`)に決定。systemdユニットとデプロイ手順を `deploy/` に用意した(Pi実機での適用は運用者側の作業)。まだ実際にはデプロイされていない。
 - 未着手: LLMによる自然文の説明パネル(方針だけ決定: ワンショットでCLIを呼び出す形にする。デフォルトは `claude -p`。実装は未着手。D9によりRaspberry Pi上の通常プロセスで動くことが確定したため、この方針のまま実装できる)。
 - Express から Hono への移行は検討の上で見送った([D10](DECISIONS.md#d10-express-から-hono-への移行は今回見送る))。デプロイ先がエッジランタイムでなくなったため、移行の主な動機が無くなったため。
+- `POST /` のレンダリング結果は地図全面表示 + 左上フローティングパネルのレイアウトに変更し、「Copy Map Intent」はその時点の地図の中心座標・ズーム・向きを `render_hints` として反映してからコピーするようにした([D11](DECISIONS.md#d11-地図全面レイアウトとcopy-map-intent時のrender_hints反映))。
 
 具体的な設計判断とその理由は [DECISIONS.md](DECISIONS.md) を参照。
 

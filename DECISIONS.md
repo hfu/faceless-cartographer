@@ -16,6 +16,7 @@
 | [D8](#d8-llm説明パネルは中核パイプラインから分離しワンショットcli呼び出しにする) | LLM説明パネルは中核パイプラインから分離し、ワンショットCLI呼び出しにする | Proposed(未実装) | 2026-07-02 |
 | [D9](#d9-デプロイ先は自己ホストのraspberry-pi-4b--cloudflared) | デプロイ先は自己ホストの Raspberry Pi 4B + cloudflared | Accepted | 2026-07-02 |
 | [D10](#d10-express-から-hono-への移行は今回見送る) | Express から Hono への移行は今回見送る | Rejected(将来再検討あり) | 2026-07-02 |
+| [D11](#d11-地図全面レイアウトとcopy-map-intent時のrender_hints反映) | 地図全面レイアウトと Copy Map Intent 時の `render_hints` 反映 | Accepted | 2026-07-02 |
 
 ---
 
@@ -120,3 +121,18 @@
 **Decision**: D9 でデプロイ先が Raspberry Pi 上の通常の Node プロセスに決まったため、Hono最大の利点(ランタイム横断・エッジ対応)を活かす場面が無くなった。Express は Pure JS でネイティブ依存も無く、aarch64上で問題なく動作する。移行によるDX上の細かな利点はあるが、「必要になるまで抽象化・移行はしない」という原則に従い、今回は見送る。
 
 **Consequences**: 現状の `src/server.ts` はExpressのまま。将来、Cartographerの一部(特にLLMに依存しない中核描画パス)だけをエッジにも展開したくなった場合は、この判断を再検討する。その際も `src/mapIntent.ts`/`src/catalog.ts`/`src/style.ts` はExpress/Honoいずれにも依存しない環境非依存の実装になっているため、書き換えが必要なのは `src/server.ts`/`src/render.ts` の薄い層のみで済む見込み。
+
+## D11: 地図全面レイアウトと Copy Map Intent 時の `render_hints` 反映
+
+**Status**: Accepted
+
+**Context**: `POST /` のレンダリング結果が、タイトル・地図・ボタン類を縦に積んだ通常のドキュメントレイアウトになっており、地図の可視領域が狭かった。実装パターンについて `unopengis/7#869` の議論を参照するよう指示があった。同issueは別プロジェクト(Vite+PMTiles+Protomaps+3D地形サイト)向けの詳細仕様だが、「地図を全面表示し、タイトル/ステータス/コントロール類は地図の上に浮かせたパネルとして重ねる」というレイアウトパターンは流用できると判断した。ただし同issueは `hash: "map"` によるURLベースの位置共有も含んでおり、これは faceless-cartographer の [ADR 0001](https://github.com/unopengis/staccato-spec/blob/main/spec/adr/0001-faceless-cartographer.md)(URLに地図の状態を持たせない)と正面から矛盾するため、意図的に採用しない。
+
+あわせて、「Copy Map Intent」を押した時点の地図の表示状態(中心座標・ズーム)が、コピーされる Map Intent に反映されていなかった(常に投稿時点の原文をそのままコピーしていた)。
+
+**Decision**:
+
+- `POST /` のレンダリングページを、`#map` を `position: fixed; inset: 0` によるフルスクリーン表示にし、タイトル・goal・通知・任意レイヤーのチェックボックス・アクションボタンを、半透明+`backdrop-filter: blur()` のパネルとして左上に重ねる形に変更した。`unopengis/7#869` のUIパターンは流用するが、`hash` によるURL状態共有は採用しない。
+- 「Copy Map Intent」クリック時、js-yaml をクライアント側でも読み込み(ESM importでCDNから、`unpkg.com/js-yaml@.../dist/js-yaml.mjs`)、元の Map Intent をパースした上で、その時点の `map.getCenter()`/`getZoom()`/`getBearing()`/`getPitch()` を `render_hints` として上書き・追記してからシリアライズし、クリップボードにコピーするようにした。これは `map-intent-vnext.md` §5 が `render_hints` の用途として明記している「実用上の再オープンのため」に沿う挙動である。YAMLの読み書きに失敗した場合は、元のテキストをそのままコピーする安全側の挙動にフォールバックする。
+
+**Consequences**: js-yaml 5.x はブラウザ向けのUMDバンドル(v3/v4にあった `dist/js-yaml.min.js` 相当)を廃止しており、ESM (`dist/js-yaml.mjs`) のみが配布されている。そのため、地図描画ページのスクリプトは `<script type="module">` に変更した(MapLibre GL JS自体は引き続きグローバル変数を公開する従来型の `<script>` タグで読み込み、モジュールスクリプトからは `maplibregl` グローバルとしてそのままアクセスしている)。Playwrightによる実ブラウザ確認で、パン・ズーム後にCopy Map Intentを押すと、実際の座標・ズームが `render_hints` に正しく反映されることを確認済み。フォームページ(`GET /`)のレイアウトは今回変更していない。

@@ -19,6 +19,8 @@ npm run dev   # http://localhost:3000
 
 `GET /` pre-fills the submission form with a real, catalog-verified example (the same one used in `src/catalog.test.ts`): submit it as-is to see a standard GSI base map with three sediment-disaster warning-zone overlays rendered on top, plus one optional layer (hidden by default, toggle with the checkbox).
 
+The rendered map is full-bleed, with the title/notices/controls in a floating panel top-left (see [`DECISIONS.md`](DECISIONS.md) D11 for why, and what it deliberately does *not* borrow from `unopengis/7#869`). "Copy Map Intent" captures the map's current center/zoom/bearing/pitch into `render_hints` before copying, so the copied text reproduces the view on screen, not just the original submission.
+
 ## Architecture
 
 ```text

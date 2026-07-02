@@ -18,6 +18,10 @@
 | [D10](#d10-express-から-hono-への移行は今回見送る) | Express から Hono への移行は今回見送る | Rejected(将来再検討あり) | 2026-07-02 |
 | [D11](#d11-地図全面レイアウトとcopy-map-intent時のrender_hints反映) | 地図全面レイアウトと Copy Map Intent 時の `render_hints` 反映 | Accepted | 2026-07-02 |
 | [D12](#d12-入力には寛容出力には厳格3リポジトリ間の整合性確認で見つけたギャップの是正) | 入力には寛容、出力には厳格(3リポジトリ間の整合性確認で見つけたギャップの是正) | Accepted | 2026-07-03 |
+| [D13](#d13-gettopページに現在のstaffプロンプトを表示する) | `GET /` トップページに現在のStaffプロンプトを表示する | Accepted | 2026-07-03 |
+| [D14](#d14-凡例現在表示中のレイヤーのみ右下折りたたみ) | 凡例(現在表示中のレイヤーのみ・右下・折りたたみ) | Accepted | 2026-07-03 |
+| [D15](#d15-構造化エラーフィードバックはmap-intentへの埋め込みで環流させる) | 構造化エラーフィードバックはMap Intentへの埋め込みで環流させる | Accepted | 2026-07-03 |
+| [D16](#d16-必須レイヤー全滅時は空の地図をそのまま出す) | 必須レイヤー全滅時は空の地図をそのまま出す | Accepted | 2026-07-03 |
 
 ---
 
@@ -154,25 +158,54 @@
 
 **Consequences**: `src/catalog.test.ts` に、実ネットワークを使わない `vi.stubGlobal('fetch', ...)` によるモックテストを追加し、(a) `tilejson: "2.2.0"` でも `tiles` があれば解決されること、(b) `tiles` が無ければ引き続き `missing` になることの両方を確認した(実際の `layers-martin` は常に `tilejson: "3.0.0"` を返すため、この分岐は実データでは検証できない)。この方針は、Cartographerが将来 `layers-martin` 以外の(TileJSONバージョンの書き方が微妙に異なるかもしれない)Libraryカタログとも組み合わされることを見越したものでもある。
 
+## D13: `GET /` トップページに現在のStaffプロンプトを表示する
+
+**Status**: Accepted
+
+**Context**: この Cartographer と組み合わせて使う Staff エージェントのプロンプトは `hfu/layers-martin` の `STAFF_PROMPT.md` にある。運用者・開発者がこの Cartographer にアクセスした際、そのまま Staff 側の設定に使えるプロンプトが手元にあると便利である。
+
+**Decision**: `GET /` のフォーム下部に折りたたみ(`<details>`)で「現在の Staff プロンプト」を表示する。表示内容は `STAFF_PROMPT.md` から実際に Staff のシステムプロンプトに追加すべき部分(````text ... ```` で囲まれたフェンス内)だけを抽出したもの。取得は `src/staffPrompt.ts` が `raw.githubusercontent.com` から都度取得し(GitHubの生ファイルなので追加認証は不要)、10分間メモリキャッシュする。取得に失敗した場合は `src/staff-prompt-fallback.txt`(2026-07-03 時点のスナップショット)にフォールバックする。
+
+**Consequences**: `GET /` が外部リポジトリへの実際のライブ依存を1つ持つことになる(Cartographerの中核描画パス自体は引き続き依存しない — `POST /` の描画ロジックには一切関与しない)。フォールバックファイルは手動更新が必要で、`STAFF_PROMPT.md` の構成(フェンス記法)が変わった場合、抽出に失敗して全文表示にフォールバックする(壊れた表示にはならない設計)。
+
+## D14: 凡例(現在表示中のレイヤーのみ・右下・折りたたみ)
+
+**Status**: Accepted
+
+**Context**: [layers-martin D18](https://github.com/hfu/layers-martin/blob/main/DECISIONS.md#d18-tilejsonを拡張しlegend_image_urlを新設する) で `legend_image_url` が追加されたことを受け、画面上に実際に凡例を表示できるようになった。表示方針として、(a) 表示中レイヤーのみか全レイヤーか、(b) 画面上の配置、(c) 常時展開か折りたたみか、の判断が必要だった。
+
+**Decision**: MapLibreの attribution 表示が「現在表示中のレイヤーのみ」を合成する仕様([layers-martin D17](https://github.com/hfu/layers-martin/blob/main/DECISIONS.md#d17-faceless-cartographer-との整合性確認catalog_contextversion-と-attribution可視性の文書化)参照)に凡例も揃える。Staffが多数のレイヤーを送ってきた場合でも画面が凡例で埋め尽くされないようにするための一貫した設計判断でもある。配置は「凡例は右下」というウェブ地図の慣習に従う。`<details>`/`<summary>` によるネイティブの折りたたみUIとし、追加のJSライブラリは使わない。任意レイヤーのチェックボックスをトグルすると、凡例の中身もリアルタイムで更新される。
+
+**Consequences**: 凡例を持たないレイヤーのみが表示されている場合、凡例パネル自体が非表示になる(`data-has-entries="false"`)。モバイル幅では `max-width: min(16rem, calc(100vw - 2rem))` で画面からはみ出さないようにしている。
+
+## D15: 構造化エラーフィードバックはMap Intentへの埋め込みで環流させる
+
+**Status**: Accepted
+
+**Context**: `spec/background.md` §10 が提案する構造化エラーレスポンス(`error_code`/`provenance_snapshot`等)は、専用のJSON APIとして実装することもできたが、そもそも現状この Cartographer に機械的なクライアントは存在せず(ADR 0001の人間介在フローが前提)、専用API化は現時点では過剰实装になると判断した。
+
+**Decision**: `missing_layers`/`unrenderable_layers` の情報を、専用APIではなく「Copy Map Intent」でコピーされる Map Intent 自体に `cartographer_feedback`(非規範的な拡張フィールド)として埋め込む。問題が無い場合はこのフィールド自体を付与しない。これにより、User が Map Intent をコピーして Staff に戻した場合、高性能な Staff エージェントであればこの `cartographer_feedback` を読み取って次の応答に反映できる、という**任意の(optional)フィードバックの環流経路**が生まれる。Cartographer 側から Staff への直接通信は発生させず、あくまで人間が運ぶ Map Intent というテキストに相乗りさせるだけなので、faceless の設計(URLで状態を持たない、人間介在の受け渡し)とも整合する。
+
+**Consequences**: `cartographer_feedback` は `map-intent-vnext.md` にはまだ存在しない、このプロジェクト独自の非規範的拡張である。D2で確立した「未知キーは無視されてよい」という前提の通り、これを理解しない Staff/Cartographer 実装からは単に無視される。将来 `unopengis/staccato-spec` 側で `background.md` §10 の構造化エラー形式が正式化された場合、フィールド名・形状をそちらに合わせて改名する可能性がある。
+
+## D16: 必須レイヤー全滅時は空の地図をそのまま出す
+
+**Status**: Accepted
+
+**Context**: `required_layers` の全件が解決に失敗した場合の挙動を検討した。専用の失敗画面を作る案もあったが、実装コストと必要性を天秤にかけた。
+
+**Decision**: 専用の失敗画面は作らない。全件失敗しても、レイヤーの無い(背景も無い)空の地図がそのまま描画され、`missing_layers` 通知パネルで全件が missing として表示される。既存の「一部解決できても描画は続ける」(D3)という設計をそのまま延長した形であり、コード変更は不要だった。
+
+**Consequences**: 将来、空の地図が実際に使い勝手が悪いと分かった場合(例えば「地図がまっさら」の意味が利用者に伝わりにくい等)、専用の失敗画面や、せめて白地図等のCartographer側デフォルト背景を差し込む案を再検討してよい。
+
 ## バックログ(未決定・保留)
 
-### 凡例(legend)が画面上で分からない
+### 凡例(legend)が画面上で分からない(解消: D14 + layers-martin D18)
 
-実際に使ってみると、地図上に色分けされた警戒区域等が表示されても、その色が何を意味するか(黄=警戒区域、赤=特別警戒区域、等)を示す凡例がどこにも出ていない、という指摘が出る見込みが高い。すぐに解決できる問題ではないため、方向性だけ記録してバックログに積む。
+~~実際に使ってみると...~~ 2026-07-03、`layers-martin` 側にTileJSON拡張 `legend_image_url` を新設し(D18)、Cartographer側に表示中レイヤーのみの折りたたみ凡例パネルを実装した(D14)。解消済みのため削除。
 
-**現状の把握**: `layers-martin` のTileJSON側の凡例情報は一貫していない。
+### デジタル庁デザインシステムへの準拠
 
-- `05_dosekiryukeikaikuiki`/`05_jisuberikeikaikuiki`/`05_kyukeishakeikaikuiki`(今回のworked exampleで使っている3レイヤー)は `legendUrl` が無く、凡例画像は `html`/`description` フィールドの中に `<img>` タグとして埋め込まれている。
-- `std` は逆に `legendUrl` があるが、画像ではなくHTMLページ(`https://maps.gsi.go.jp/development/ichiran.html#std`)を指しており、そのまま `<img>` として埋め込めない。
-- `landslide` は `legendUrl` も無く、`html` 内にも凡例画像が無い。
+日本のデジタル庁が公開している[デザインシステム](https://design.digital.go.jp/)に、可能な範囲で準拠していきたい。現状のUI(D11のフローティングパネル、D14の凡例)は独自のCSSで組んでおり、デジタル庁デザインシステムのコンポーネント・カラートークン・タイポグラフィ等とは特に揃えていない。
 
-つまり「`legendUrl` があれば `<img>` で出す」という単純な実装では、今回のworked exampleの主要レイヤーの凡例をそもそも拾えない。`layers-martin` 側のメタデータ不整合に依存した問題であり、Cartographer側だけで綺麗に解決するのは難しい。
-
-**考えられる方向性(いずれも未着手)**:
-
-1. 各レイヤーの `description`/`html` フィールドをサニタイズした上でパネルに表示する(GSI由来の生HTMLをそのまま埋め込むとXSSリスクがあるため、DOMPurify等でのサニタイズが前提になる)。`<img>` タグを含む場合は自然に凡例画像も表示される。ただし `html` は長文の説明を含むことが多く、パネルが煩雑になる可能性がある。
-2. `description`/`html` から `<img>` タグだけを抽出し、「凡例」として個別に小さく表示する(説明文自体は出さない)。今回のケースには対応できるが、`landslide` のように `html` 内にも凡例が無いレイヤーには効果がない。
-3. `legendUrl` が画像かHTMLページかを判定し(拡張子や `Content-Type` で判別)、画像なら `<img>`、HTMLページならリンクとして出す。`std` のようなケースに対応できるが、`05_*` 系には効かない(そもそも `legendUrl` が無いため)。
-4. 上記を組み合わせる: `legendUrl` が画像ならそれを使う → 無ければ `html` 内の `<img>` を探す → それも無ければ「凡例情報なし」と明示する。実装としては現実的だが、`layers-martin` 側のメタデータの揺れを前提にした場当たり的な対応になる。
-
-`layers-martin` 側で凡例情報を構造化して持たせる(例えば `legend_image_url` のような専用フィールドを新設し、`html` からの抽出処理を `build_catalog.rb` 側で行う)方が本質的な解決に近いかもしれないが、それはCartographer側の変更では完結しない。
+すぐに着手する優先度ではないが、方向性として: (a) デザインシステムをそのまま採用する(コンポーネントライブラリとして導入)か、(b) カラートークンやスペーシングの考え方だけ参考にしつつ独自実装を続けるか、(c) 政府機関向けサービスではないためどこまで律儀に準拠する必要があるか、といった判断が必要になる。着手する際に改めて検討する。

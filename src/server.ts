@@ -3,6 +3,7 @@ import { parseMapIntent } from './mapIntent.ts';
 import { resolveLayers } from './catalog.ts';
 import { buildStyle, computeInitialView } from './style.ts';
 import { renderFormPage, renderMapPage } from './render.ts';
+import { getStaffPromptMarkdown } from './staffPrompt.ts';
 
 const app = express();
 
@@ -22,8 +23,9 @@ app.use((_req, res, next) => {
 
 // GET / -- the only public interactive endpoint (ADR 0001). No other route
 // carries map state; this always returns the same form.
-app.get('/', (_req, res) => {
-  res.type('html').send(renderFormPage());
+app.get('/', async (_req, res) => {
+  const staffPromptMarkdown = await getStaffPromptMarkdown();
+  res.type('html').send(renderFormPage({ staffPromptMarkdown }));
 });
 
 // POST / -- accepts a posted Map Intent and renders the map. Never persisted
@@ -33,7 +35,8 @@ app.post('/', async (req, res) => {
 
   const parsed = parseMapIntent(rawIntent);
   if (!parsed.ok) {
-    res.status(400).type('html').send(renderFormPage({ prefill: rawIntent, error: parsed.error }));
+    const staffPromptMarkdown = await getStaffPromptMarkdown();
+    res.status(400).type('html').send(renderFormPage({ prefill: rawIntent, error: parsed.error, staffPromptMarkdown }));
     return;
   }
 

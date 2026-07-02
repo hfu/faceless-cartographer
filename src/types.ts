@@ -74,6 +74,9 @@ export interface TileJson {
   bounds?: [number, number, number, number];
   attribution?: string;
   description?: string;
+  // Extension key, not part of TileJSON 3.0 proper. See
+  // hfu/layers-martin DECISIONS.md D18.
+  legend_image_url?: string;
   [key: string]: unknown;
 }
 

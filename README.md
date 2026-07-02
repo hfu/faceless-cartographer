@@ -13,9 +13,11 @@ Initial implementation. `GET /` and `POST /` work end-to-end against the live `l
 ## Try it
 
 ```sh
-npm install
-npm run dev   # http://localhost:3000
+cp .env.example .env
+just serve   # http://localhost:3000 -- installs dependencies on first run
 ```
+
+(No [`just`](https://github.com/casey/just)? `npm install && npm run dev` works the same.)
 
 `GET /` pre-fills the submission form with a real, catalog-verified example (the same one used in `src/catalog.test.ts`): submit it as-is to see a standard GSI base map with three sediment-disaster warning-zone overlays rendered on top, plus one optional layer (hidden by default, toggle with the checkbox).
 
@@ -41,15 +43,15 @@ The core pipeline (`mapIntent.ts` → `catalog.ts` → `style.ts`) has no LLM de
 ## Development
 
 ```sh
-npm install
-npm run dev        # http://localhost:3000, restarts on change
-npm run typecheck
-npm test            # includes integration tests against the live layers-martin catalog
+just dev     # restarts on change, loads .env if present
+just check   # typecheck + test (what CI runs)
 ```
+
+or without `just`: `npm install`, then `npm run dev` / `npm run typecheck` / `npm test`.
 
 ## Deployment
 
-Self-hosted on a Raspberry Pi 4B behind `cloudflared`, at `cartographer.optgeo.org` (see [`DECISIONS.md`](DECISIONS.md) D9). Setup instructions and a systemd unit template are in [`deploy/`](deploy/). Not yet actually deployed as of this writing.
+Self-hosted on a Raspberry Pi 4B behind `cloudflared`, at `cartographer.optgeo.org` (see [`DECISIONS.md`](DECISIONS.md) D9). The whole point of the `Justfile`/`.env` setup above is that deployment is the same three steps as local dev (clone, copy `.env`, `just serve`) with a systemd unit wrapping `just serve` for process management (D17). Full setup instructions and the systemd unit template are in [`deploy/`](deploy/). Not yet actually deployed as of this writing.
 
 ## Known limitations (v1)
 

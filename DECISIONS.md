@@ -22,6 +22,7 @@
 | [D14](#d14-凡例現在表示中のレイヤーのみ右下折りたたみ) | 凡例(現在表示中のレイヤーのみ・右下・折りたたみ) | Accepted | 2026-07-03 |
 | [D15](#d15-構造化エラーフィードバックはmap-intentへの埋め込みで環流させる) | 構造化エラーフィードバックはMap Intentへの埋め込みで環流させる | Accepted | 2026-07-03 |
 | [D16](#d16-必須レイヤー全滅時は空の地図をそのまま出す) | 必須レイヤー全滅時は空の地図をそのまま出す | Accepted | 2026-07-03 |
+| [D17](#d17-静的サイト化ではなく現状のexpressraspberry-piを維持デプロイはjustenvで統一) | 静的サイト化ではなく現状の Express/Raspberry Pi を維持、デプロイは `just`/`.env` で統一 | Accepted | 2026-07-03 |
 
 ---
 
@@ -198,7 +199,26 @@
 
 **Consequences**: 将来、空の地図が実際に使い勝手が悪いと分かった場合(例えば「地図がまっさら」の意味が利用者に伝わりにくい等)、専用の失敗画面や、せめて白地図等のCartographer側デフォルト背景を差し込む案を再検討してよい。
 
-## バックログ(未決定・保留)
+## D17: 静的サイト化ではなく現状のExpress/Raspberry Piを維持、デプロイは`just`/`.env`で統一
+
+**Status**: Accepted
+
+**Context**: 実装が進み、中核パイプライン(`mapIntent.ts`/`catalog.ts`/`style.ts`)が環境非依存であること、`layers-martin` のカタログがCORSを許可していることが分かった時点で、「そもそも動的サーバーである必要があるか、静的サイト化できないか」を改めて検討した。
+
+検討の結果、2点の理由で現状維持に決めた。
+
+1. `ADR 0001` は `POST /` を文字通りサーバー側で受理する挙動として規定しており(「`POST /` MUST accept Map Intent and render map output」)、純粋な静的サイト(GitHub Pages等)ではPOSTを処理できず、フォーム送信をクライアントJSで代替する形になる。これは精神は満たすが文言には反する。
+2. D8(LLM説明パネルを `claude -p` のCLIサブプロセスで呼ぶ方針)を維持する場合、Cloudflare Workers/Pages Functions 等のエッジ・サーバーレス関数では `child_process` が使えず両立しない。D8を維持する意思を確認した上で、通常のNode実行環境(Raspberry Pi)を続ける決定をした。
+
+**Decision**: アーキテクチャ(Express + Raspberry Pi 常駐プロセス)は変更しない。その代わり、実際のデプロイを容易にするため、`Justfile` と `.env` によるワークフローを整備した。
+
+- `Justfile`: `just serve` でサーバー起動(`node_modules` が無ければ自動でインストールしてから起動。既に存在すれば再インストールはスキップし、再起動のたびにネットワーク・npmレジストリへの到達性に依存しないようにしている)。`just dev`(ファイル変更で自動再起動)、`just check`(typecheck + test、CIと同じ)、`just install` も用意。
+- `.env.example`: `PORT` のみを持つ最小構成。`cp .env.example .env` でコピーして使う。`.gitignore` に `.env` を追加。
+- `src/server.ts` 自体は変更していない(元々 `process.env.PORT` を読むだけだったので、`.env` の値注入は `tsx --env-file-if-exists=.env`(Node 22 のネイティブ `.env` サポート)側の責務とし、`dotenv` 等の追加npm依存は入れていない)。
+- `deploy/faceless-cartographer.service` の `ExecStart` を `npm run start` から `/usr/local/bin/just serve` に変更し、`PORT` の指定はユニットファイル内ではなく `.env` に一本化した(手動起動とsystemd起動で設定の二重管理を避ける)。
+- `deploy/README.md` を、実際に「clone → `.env` をコピー → `just serve`」で起動できる手順に更新した。
+
+**Consequences**: `git clone` してから `cp .env.example .env && just serve` の2手順(3コマンド)でサーバーが立ち上がることをローカルで実際に確認した(初回はnpm installが走り、2回目以降はスキップされて即起動することも確認済み)。将来的にD8のCLIサブプロセス方針自体を見直す(例: HTTP API呼び出し方式に変更する)場合、この判断(静的サイト化しないこと)も同時に再検討の対象になる。
 
 ### 凡例(legend)が画面上で分からない(解消: D14 + layers-martin D18)
 

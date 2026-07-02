@@ -16,11 +16,9 @@ function isVectorTileUrl(url: string): boolean {
 }
 
 // Layer ordering: required layers first (so a base map listed first in
-// required_layers sits underneath), then optional layers on top -- per
-// JUMPSTART.md "Catalog resolution" §4. Optional layers are added to the
-// style but start hidden (visibility: "none"); the rendered page provides
-// checkboxes to reveal them, matching JUMPSTART.md's "can be toggled off by
-// default" note.
+// required_layers sits underneath), then optional layers on top. Optional
+// layers are added to the style but start hidden (visibility: "none"); the
+// rendered page provides checkboxes to reveal them -- see DECISIONS.md D4.
 export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { style: MapLibreStyle; unrenderable: string[] } {
   const sources: MapLibreStyle['sources'] = {};
   const layers: MapLibreStyle['layers'] = [];

@@ -13,7 +13,7 @@ function catalogBaseUrl(uri: string): string {
 async function fetchTileJson(catalog: CatalogEntry, sourceId: string): Promise<TileJson | null> {
   if (!SUPPORTED_CATALOG_TYPES.has(catalog.type)) {
     // catalog_type "stac" (or anything else) is out of scope for v1 -- see
-    // JUMPSTART.md Non-goals. Treat as unresolvable rather than guessing.
+    // HANDOVER.md "v1 のスコープ外". Treat as unresolvable rather than guessing.
     return null;
   }
   const base = catalogBaseUrl(catalog.uri);

@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { resolveLayers } from './catalog.ts';
 import type { MapIntent } from './types.ts';
 
-// These hit the real hfu/layers-martin catalog over the network, by design
-// (JUMPSTART.md: "there's no mock catalog to build against, this is the real
-// reference implementation"). If layers-martin's catalog changes shape or
-// these specific source_ids stop existing, that's itself useful signal.
+// These hit the real hfu/layers-martin catalog over the network, by design --
+// there's no mock catalog to build against, this is the real reference
+// implementation. If layers-martin's catalog changes shape or these specific
+// source_ids stop existing, that's itself useful signal.
 
 function intentWith(requiredIds: string[], optionalIds: string[] = []): MapIntent {
   return {

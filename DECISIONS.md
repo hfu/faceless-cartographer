@@ -136,3 +136,26 @@
 - 「Copy Map Intent」クリック時、js-yaml をクライアント側でも読み込み(ESM importでCDNから、`unpkg.com/js-yaml@.../dist/js-yaml.mjs`)、元の Map Intent をパースした上で、その時点の `map.getCenter()`/`getZoom()`/`getBearing()`/`getPitch()` を `render_hints` として上書き・追記してからシリアライズし、クリップボードにコピーするようにした。これは `map-intent-vnext.md` §5 が `render_hints` の用途として明記している「実用上の再オープンのため」に沿う挙動である。YAMLの読み書きに失敗した場合は、元のテキストをそのままコピーする安全側の挙動にフォールバックする。
 
 **Consequences**: js-yaml 5.x はブラウザ向けのUMDバンドル(v3/v4にあった `dist/js-yaml.min.js` 相当)を廃止しており、ESM (`dist/js-yaml.mjs`) のみが配布されている。そのため、地図描画ページのスクリプトは `<script type="module">` に変更した(MapLibre GL JS自体は引き続きグローバル変数を公開する従来型の `<script>` タグで読み込み、モジュールスクリプトからは `maplibregl` グローバルとしてそのままアクセスしている)。Playwrightによる実ブラウザ確認で、パン・ズーム後にCopy Map Intentを押すと、実際の座標・ズームが `render_hints` に正しく反映されることを確認済み。フォームページ(`GET /`)のレイアウトは今回変更していない。
+
+## バックログ(未決定・保留)
+
+### 凡例(legend)が画面上で分からない
+
+実際に使ってみると、地図上に色分けされた警戒区域等が表示されても、その色が何を意味するか(黄=警戒区域、赤=特別警戒区域、等)を示す凡例がどこにも出ていない、という指摘が出る見込みが高い。すぐに解決できる問題ではないため、方向性だけ記録してバックログに積む。
+
+**現状の把握**: `layers-martin` のTileJSON側の凡例情報は一貫していない。
+
+- `05_dosekiryukeikaikuiki`/`05_jisuberikeikaikuiki`/`05_kyukeishakeikaikuiki`(今回のworked exampleで使っている3レイヤー)は `legendUrl` が無く、凡例画像は `html`/`description` フィールドの中に `<img>` タグとして埋め込まれている。
+- `std` は逆に `legendUrl` があるが、画像ではなくHTMLページ(`https://maps.gsi.go.jp/development/ichiran.html#std`)を指しており、そのまま `<img>` として埋め込めない。
+- `landslide` は `legendUrl` も無く、`html` 内にも凡例画像が無い。
+
+つまり「`legendUrl` があれば `<img>` で出す」という単純な実装では、今回のworked exampleの主要レイヤーの凡例をそもそも拾えない。`layers-martin` 側のメタデータ不整合に依存した問題であり、Cartographer側だけで綺麗に解決するのは難しい。
+
+**考えられる方向性(いずれも未着手)**:
+
+1. 各レイヤーの `description`/`html` フィールドをサニタイズした上でパネルに表示する(GSI由来の生HTMLをそのまま埋め込むとXSSリスクがあるため、DOMPurify等でのサニタイズが前提になる)。`<img>` タグを含む場合は自然に凡例画像も表示される。ただし `html` は長文の説明を含むことが多く、パネルが煩雑になる可能性がある。
+2. `description`/`html` から `<img>` タグだけを抽出し、「凡例」として個別に小さく表示する(説明文自体は出さない)。今回のケースには対応できるが、`landslide` のように `html` 内にも凡例が無いレイヤーには効果がない。
+3. `legendUrl` が画像かHTMLページかを判定し(拡張子や `Content-Type` で判別)、画像なら `<img>`、HTMLページならリンクとして出す。`std` のようなケースに対応できるが、`05_*` 系には効かない(そもそも `legendUrl` が無いため)。
+4. 上記を組み合わせる: `legendUrl` が画像ならそれを使う → 無ければ `html` 内の `<img>` を探す → それも無ければ「凡例情報なし」と明示する。実装としては現実的だが、`layers-martin` 側のメタデータの揺れを前提にした場当たり的な対応になる。
+
+`layers-martin` 側で凡例情報を構造化して持たせる(例えば `legend_image_url` のような専用フィールドを新設し、`html` からの抽出処理を `build_catalog.rb` 側で行う)方が本質的な解決に近いかもしれないが、それはCartographer側の変更では完結しない。

@@ -68,7 +68,8 @@ export function renderFormView(
 ): void {
   const value = escapeHtml(opts.prefill ?? EXAMPLE_MAP_INTENT);
   const errorBlock = opts.error ? `<div class="notice error">${escapeHtml(opts.error)}</div>` : '';
-  const staffPrompt = escapeHtml(extractStaffPromptBlock(opts.staffPromptMarkdown));
+  const staffPromptRaw = extractStaffPromptBlock(opts.staffPromptMarkdown);
+  const staffPrompt = escapeHtml(staffPromptRaw);
 
   container.innerHTML = `
 <div class="form-view">
@@ -84,13 +85,24 @@ export function renderFormView(
     </div>
     <div class="card">
       <details>
-        <summary>現在の Staff プロンプト(<a href="https://github.com/hfu/layers-martin/blob/main/STAFF_PROMPT.md" target="_blank" rel="noreferrer">hfu/layers-martin STAFF_PROMPT.md</a> より取得)</summary>
-        <p style="font-size:0.82rem;color:#555;">このCartographerと組み合わせて使う Staff エージェントのシステムプロンプトに、そのまま追加できる内容です。</p>
+        <summary>現在の Staff プロンプト</summary>
+        <p style="font-size:0.82rem;color:#555;">このCartographerと組み合わせて使う Staff エージェントのシステムプロンプトに、そのまま追加できる内容です。取得元: <a href="https://github.com/hfu/layers-martin/blob/main/STAFF_PROMPT.md" target="_blank" rel="noreferrer">hfu/layers-martin STAFF_PROMPT.md</a></p>
+        <p><button id="copy-staff-prompt" type="button">Copy Staff Prompt</button></p>
         <pre>${staffPrompt}</pre>
       </details>
     </div>
   </div>
 </div>`;
+
+  const copyPromptButton = container.querySelector<HTMLButtonElement>('#copy-staff-prompt')!;
+  copyPromptButton.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(staffPromptRaw);
+    const label = copyPromptButton.textContent;
+    copyPromptButton.textContent = 'Copied!';
+    setTimeout(() => {
+      copyPromptButton.textContent = label;
+    }, 1500);
+  });
 
   const form = container.querySelector<HTMLFormElement>('#intent-form')!;
   form.addEventListener('submit', (e) => {

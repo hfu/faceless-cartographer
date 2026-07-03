@@ -27,6 +27,7 @@
 | [D19](#d19-staffプロンプトの取得はビルド時fetchに変更する) | Staffプロンプトの取得はビルド時fetchに変更する | Accepted | 2026-07-04 |
 | [D20](#d20-この世代のcartographerにはllmを載せない) | この世代のCartographerにはLLMを載せない | Accepted | 2026-07-04 |
 | [D21](#d21-静的サイトとしてdocsに出力しgithub-pagesでホストする) | 静的サイトとして `docs/` に出力し、GitHub Pagesでホストする | Accepted | 2026-07-04 |
+| [D22](#d22-staffプロンプトにコピーボタンを追加しsummary内のリンクを外に出す) | Staffプロンプトにコピーボタンを追加し、`<summary>`内のリンクを外に出す | Accepted | 2026-07-04 |
 
 ---
 
@@ -277,6 +278,16 @@
 Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクトリ、systemdユニット、`Justfile` の `serve`、`.env`)は撤去した。
 
 **Consequences**: D9・D17 を置き換える。`express`/`@types/express` 依存を削除。ホスティング費用が完全に無くなり、可用性はGitHub Pagesに委ねられる(自宅サーバーの電源・回線・故障リスクから解放される)。将来D20を再検討してLLM機能を追加する場合、この判断も連動して見直す必要がある(コア機能は静的のまま維持し、LLM部分だけ別APIとして追加する形を想定)。
+
+## D22: Staffプロンプトにコピーボタンを追加し、`<summary>`内のリンクを外に出す
+
+**Status**: Accepted
+
+**Context**: 「現在の Staff プロンプト」の折りたたみセクションに、クリップボードへのコピーボタンを追加する依頼があった。実装・検証の過程で、既存の(この依頼とは無関係の)不具合が見つかった: `<summary>` タグ内に `target="_blank"` のリンク(取得元の `STAFF_PROMPT.md` へのリンク)を埋め込んでいたため、利用者がその文字列部分をクリックすると `<details>` の開閉ではなくリンクの新規タブオープンが優先され、開閉が阻害されるケースがあった(Playwrightでの実クリック操作で再現・確認)。
+
+**Decision**: 「Copy Map Intent」ボタン(D11)と同じパターンで「Copy Staff Prompt」ボタンを追加した。クリップボードへコピーするのは表示用にHTMLエスケープしたテキストではなく、`extractStaffPromptBlock` が返す生のプレーンテキスト。あわせて、`<summary>` からリンクを除去し、`<summary>現在の Staff プロンプト</summary>` という短いテキストのみにした。取得元へのリンクは、`<details>` の中身(展開後に見える説明文中)に移動した。これにより `<summary>` 全体が確実に開閉のトグル領域として機能する。
+
+**Consequences**: Playwrightで、(a) `<summary>` クリックで `<details>` が開くこと、(b) 「Copy Staff Prompt」でクリップボードに正しい内容(プロンプト本文、約6,900文字)が入ること、(c) ボタンラベルが一時的に "Copied!" に変わることを確認した。既存の19件のテストと型チェックには影響なし(この変更はDOM/UIのみ)。
 
 ## バックログ(未決定・保留)
 

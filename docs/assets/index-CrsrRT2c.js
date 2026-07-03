@@ -805,13 +805,13 @@ provenance:
   generated_by: "manual-test"
   generated_at: "2026-07-02T00:00:00Z"
   intent_id: "test-001"
-`;function mi(e){return e.replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`)}function hi(e){let t=e.match(/````text\n([\s\S]*?)\n````/);return(t?t[1]:e).trim()}function gi(e,t){let n=mi(t.prefill??pi);e.innerHTML=`
+`;function mi(e){return e.replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`)}function hi(e){let t=e.match(/````text\n([\s\S]*?)\n````/);return(t?t[1]:e).trim()}function gi(e,t){let n=mi(t.prefill??pi),r=t.error?`<div class="notice error">${mi(t.error)}</div>`:``,i=hi(t.staffPromptMarkdown);e.innerHTML=`
 <div class="form-view">
   <div class="wrap">
     <div class="card">
       <h1>faceless-cartographer</h1>
       <p>Map Intent (YAML) を貼り付けて送信してください。URL には状態を持たせません。</p>
-      ${t.error?`<div class="notice error">${mi(t.error)}</div>`:``}
+      ${r}
       <form id="intent-form">
         <textarea name="map_intent" rows="22">${n}</textarea>
         <p><button type="submit">Render</button></p>
@@ -819,13 +819,14 @@ provenance:
     </div>
     <div class="card">
       <details>
-        <summary>現在の Staff プロンプト(<a href="https://github.com/hfu/layers-martin/blob/main/STAFF_PROMPT.md" target="_blank" rel="noreferrer">hfu/layers-martin STAFF_PROMPT.md</a> より取得)</summary>
-        <p style="font-size:0.82rem;color:#555;">このCartographerと組み合わせて使う Staff エージェントのシステムプロンプトに、そのまま追加できる内容です。</p>
-        <pre>${mi(hi(t.staffPromptMarkdown))}</pre>
+        <summary>現在の Staff プロンプト</summary>
+        <p style="font-size:0.82rem;color:#555;">このCartographerと組み合わせて使う Staff エージェントのシステムプロンプトに、そのまま追加できる内容です。取得元: <a href="https://github.com/hfu/layers-martin/blob/main/STAFF_PROMPT.md" target="_blank" rel="noreferrer">hfu/layers-martin STAFF_PROMPT.md</a></p>
+        <p><button id="copy-staff-prompt" type="button">Copy Staff Prompt</button></p>
+        <pre>${mi(i)}</pre>
       </details>
     </div>
   </div>
-</div>`;let r=e.querySelector(`#intent-form`);r.addEventListener(`submit`,e=>{e.preventDefault();let n=r.querySelector(`textarea[name=map_intent]`);t.onSubmit(n.value)})}function _i(e,t){let{rawIntent:n,intent:r,view:i,style:a,resolved:o,missing:s,unrenderable:c,urlShareWarning:l,onBack:u}=t,d=s.length>0?`<div class="notice"><strong>見つからないレイヤー(missing_layers)</strong>: ${s.map(mi).join(`, `)}</div>`:``,f=c.length>0?`<div class="notice"><strong>ベクトルタイルのため描画をスキップしたレイヤー</strong>: ${c.map(mi).join(`, `)}(vector_layers が catalog 側に無く、描画に必要なスタイル情報を復元できません)</div>`:``,p=l?`<div class="notice">この Map Intent は <code>sharing_policy.url_share: true</code> を指定していますが、この Cartographer は faceless 構成(URLに状態を持たせない)で動作しているため無視されます。共有は Map Intent のテキスト自体で行ってください。</div>`:``,m=o.filter(e=>!e.required),h=m.map(e=>`<label style="display:block"><input type="checkbox" data-layer-toggle="${mi(e.source_id)}"> ${mi(e.label??e.source_id)}</label>`).join(`
+</div>`;let a=e.querySelector(`#copy-staff-prompt`);a.addEventListener(`click`,async()=>{await navigator.clipboard.writeText(i);let e=a.textContent;a.textContent=`Copied!`,setTimeout(()=>{a.textContent=e},1500)});let o=e.querySelector(`#intent-form`);o.addEventListener(`submit`,e=>{e.preventDefault();let n=o.querySelector(`textarea[name=map_intent]`);t.onSubmit(n.value)})}function _i(e,t){let{rawIntent:n,intent:r,view:i,style:a,resolved:o,missing:s,unrenderable:c,urlShareWarning:l,onBack:u}=t,d=s.length>0?`<div class="notice"><strong>見つからないレイヤー(missing_layers)</strong>: ${s.map(mi).join(`, `)}</div>`:``,f=c.length>0?`<div class="notice"><strong>ベクトルタイルのため描画をスキップしたレイヤー</strong>: ${c.map(mi).join(`, `)}(vector_layers が catalog 側に無く、描画に必要なスタイル情報を復元できません)</div>`:``,p=l?`<div class="notice">この Map Intent は <code>sharing_policy.url_share: true</code> を指定していますが、この Cartographer は faceless 構成(URLに状態を持たせない)で動作しているため無視されます。共有は Map Intent のテキスト自体で行ってください。</div>`:``,m=o.filter(e=>!e.required),h=m.map(e=>`<label style="display:block"><input type="checkbox" data-layer-toggle="${mi(e.source_id)}"> ${mi(e.label??e.source_id)}</label>`).join(`
 `);e.innerHTML=`
 <div class="map-view">
   <div id="map"></div>

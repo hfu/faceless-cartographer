@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>faceless-cartographer</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+<style>
+  :root { --card-bg: rgba(255,255,255,0.92); --shadow: 0 2px 16px rgba(0,0,0,0.18); --radius: 10px; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, sans-serif; }
+  #app { height: 100%; }
+  button { cursor: pointer; font: inherit; }
+  code { background: rgba(0,0,0,0.06); padding: .1rem .3rem; border-radius: 4px; }
+  .notice { color: #7a5b00; background: rgba(216, 169, 0, 0.14); border-radius: 6px; padding: .5rem .6rem; margin: .4rem 0; font-size: 0.82rem; }
+  .notice.error { color: #b00020; background: rgba(176,0,32,0.08); }
+
+  /* Form view */
+  .form-view { background: #f2f1ee; min-height: 100%; padding: 1.25rem; }
+  .form-view .wrap { max-width: 42rem; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; }
+  .card { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.25rem 1.5rem; }
+  .card h1 { font-size: 1.15rem; margin: 0 0 .3rem; }
+  textarea { width: 100%; box-sizing: border-box; font-family: ui-monospace, monospace; font-size: 0.82rem; border-radius: 6px; border: 1px solid #ccc; padding: .6rem; }
+  pre { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 0.78rem; max-height: 24rem; overflow-y: auto; background: rgba(0,0,0,0.04); border-radius: 6px; padding: .75rem; margin: 0; }
+  summary { cursor: pointer; font-weight: 600; }
+
+  /* Map view */
+  .map-view { position: fixed; inset: 0; }
+  #map { position: absolute; inset: 0; }
+  .panel {
+    position: absolute; top: 1rem; left: 1rem; right: 1rem; max-width: 22rem;
+    max-height: calc(100vh - 2rem); overflow-y: auto;
+    background: var(--card-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--radius); padding: .9rem 1rem; box-shadow: var(--shadow);
+    z-index: 10; line-height: 1.45; font-size: 0.88rem;
+  }
+  .panel h1 { font-size: 1rem; margin: 0 0 .4rem; }
+  .panel .layers { margin: .5rem 0; }
+  .panel .layers strong { display: block; margin-bottom: .2rem; }
+  .panel .actions { display: flex; gap: .5rem; align-items: center; margin-top: .6rem; flex-wrap: wrap; }
+  @media (max-width: 30rem) { .panel { max-width: none; } }
+
+  #legend {
+    position: absolute; bottom: 1rem; right: 1rem; max-width: min(16rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem); overflow-y: auto;
+    background: var(--card-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--radius); box-shadow: var(--shadow); z-index: 10; font-size: 0.82rem; display: none;
+  }
+  #legend[data-has-entries="true"] { display: block; }
+  #legend summary { padding: .5rem .7rem; font-weight: 600; }
+  #legend .legend-body { padding: 0 .7rem .7rem; }
+  #legend .legend-entry { margin-top: .5rem; }
+  #legend .legend-entry .label { display: block; font-size: 0.76rem; color: #444; margin-bottom: .2rem; }
+  #legend .legend-entry img { max-width: 100%; display: block; border-radius: 4px; }
+  .maplibregl-ctrl-bottom-left { max-width: calc(100vw - 12rem); }
+</style>
+  <script type="module" crossorigin src="./assets/index-BDG4rBNQ.js"></script>
+</head>
+<body>
+<div id="app"></div>
+</body>
+</html>

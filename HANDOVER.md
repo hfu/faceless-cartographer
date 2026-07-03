@@ -20,7 +20,9 @@ Cartographer  本プロジェクト。インターネット側で動作し、Map
 Library       カタログメタデータを公開する。参照実装は hfu/layers-martin
 ```
 
-Cartographer は意図的に「faceless」である: 公開エンドポイントは `GET /` と `POST /` のみで、URLに地図の状態(ズーム・中心座標・選択レイヤー等)を一切持たせない。これは提案ではなく規範的な決定であり(`unopengis/staccato-spec` の [ADR 0001](https://github.com/unopengis/staccato-spec/blob/main/spec/adr/0001-faceless-cartographer.md))、覆すには新たな ADR が必要とされている。共有の一次artifactは Map Intent のテキスト自体であり、URLではない。
+Cartographer は意図的に「faceless」である: URLに地図の状態(ズーム・中心座標・選択レイヤー等)を一切持たせない。これは提案ではなく規範的な決定であり(`unopengis/staccato-spec` の [ADR 0001](https://github.com/unopengis/staccato-spec/blob/main/spec/adr/0001-faceless-cartographer.md))、覆すには新たな ADR が必要とされている。共有の一次artifactは Map Intent のテキスト自体であり、URLではない。
+
+本実装は ADR 0001 の「`GET /` はフォームを返し `POST /` が受理・描画する」という文言を、単一ページのSPA(クライアント側の状態遷移。実際のHTTPリクエストは発生しない)として満たしている。文言通りの実装ではないが、URLが一切変化しないという点でむしろ趣旨をより徹底して満たしている、という判断([DECISIONS.md](DECISIONS.md) D18)。この解釈の違いはspec repoへ提起できていない、意図的な逸脱として明示的に記録している。
 
 ### なぜ Cartographer は「軽く」あるべきか
 
@@ -29,34 +31,34 @@ Cartographer は意図的に「faceless」である: 公開エンドポイント
 1. **情報管理上の理由**: Cartographer は公開のインターネット向けサービスである。Map Intent がエンタープライズ内部のビジネスロジック(なぜその判断をしたか)を漏らすことは望ましくない。Map Intent は `source_id` や `area.bbox` のように技術的に具体化されているため、機微な文脈を運ぶ必要がない。Staffが「なぜ」を、Cartographerは「何を」だけを受け取る。
 2. **情報技術上の理由**: Staffはエンタープライズ内で高価な高性能LLMと組み合わせられる一方、Cartographerは安価にスケールする必要がある公開サービスである。**中核の描画パスにLLMを一切必要としない**設計が前提。Map Intent → MapLibreスタイル+ソース、という決定的な変換で完結する。
 
-この方針から、本実装のコアパイプライン(`src/mapIntent.ts` → `src/catalog.ts` → `src/style.ts`)はLLMに依存しない。将来的にLLMによる自然文の説明パネルを追加する可能性はあるが、それは分離可能なオプション機能として扱う(下記「現在の状態」参照)。
+この方針から、本実装のコアパイプライン(`src/mapIntent.ts` → `src/catalog.ts` → `src/style.ts`)はLLMに依存しない。この世代の Cartographer は LLM を一切組み込まないことに決めた([DECISIONS.md](DECISIONS.md) D20)。地図として扱うデータが画像タイル中心である現状では、LLMによる自然文説明が無くても地図として完結するため。将来欲しくなった場合も、Cartographer本体に埋め込む(CLIサブプロセス等)のではなく、別の呼び出し可能なAPIとして切り出す方針。
 
 ### 入力には寛容に、出力には厳格に(Postel's law)
 
 Cartographer は複数の Staff・複数の Library カタログと組み合わされる前提の、エコシステムの結節点である。そのため、Map Intent や TileJSON の受け取り側では過度に厳格な検証をしない: 例えば TileJSON の `tilejson` フィールドがバージョン文字列として想定外でも、`tiles` 配列が実際に使える形であれば描画する([D12](DECISIONS.md#d12-入力には寛容出力には厳格3リポジトリ間の整合性確認で見つけたギャップの是正))。spec上 SHOULD(MUSTでない)の規定に反する Map Intent(例: `sharing_policy.url_share: true`)も、拒否はせず警告に留めて処理を続ける。一方で、Cartographer 自身が出す HTML・ヘッダー(`Referrer-Policy` 等)や、コピーする Map Intent の形式は spec に厳密に従う。
 
-## 現在の状態(2026-07-02 時点)
+## 現在の状態(2026-07-04 時点)
 
-- 実装は Express + TypeScript(`tsx` で直接実行、ビルドステップなし)。`src/mapIntent.ts`(パース・バリデーション)→ `src/catalog.ts`(カタログ解決)→ `src/style.ts`(MapLibreスタイル構築)という決定的なパイプラインを、`src/server.ts`/`src/render.ts` が `GET /`・`POST /` として提供する。
-- `hfu/layers-martin` の実カタログ(`https://hfu.github.io/layers-martin/catalog`)に対して実際に動作確認済み。土砂災害警戒区域の検証済み例(標準地図 + 警戒区域3件 + 任意レイヤー1件)が、実際にブラウザで正しく描画されることを Playwright のスクリーンショットで確認した(青い警戒区域が標準地図の上に正しく重なる)。この例は `src/render.ts` の `EXAMPLE_MAP_INTENT` として初期フォームにそのまま埋め込まれている。
-- テスト19件(`src/*.test.ts`)全パス。`src/catalog.test.ts` は実際に `layers-martin` の生カタログへHTTPで問い合わせる統合テストが中心だが、寛容な入力受け入れ(D12)の検証だけは `vi.stubGlobal` によるモックを使っている(実際の `layers-martin` は常に `tilejson: "3.0.0"` を返すため、非対応バージョンのケースは実データでは再現できない)。CI(`.github/workflows/ci.yml`)は typecheck + test を実行し green。
-- デプロイ先は自己ホストの Raspberry Pi 4B + cloudflared([D9](DECISIONS.md#d9-デプロイ先は自己ホストのraspberry-pi-4b--cloudflared)、`cartographer.optgeo.org`)に決定。静的サイト化も改めて検討したが、`ADR 0001` の `POST /` 規定と D8 のCLIサブプロセス方針を維持するため見送った([D17](DECISIONS.md#d17-静的サイト化ではなく現状のexpressraspberry-piを維持デプロイはjustenvで統一))。`Justfile`/`.env` を整備し、clone → `.env` コピー → `just serve` の3手順で起動できることをローカルで確認済み。systemdユニット・デプロイ手順を `deploy/` に用意した(Pi実機での適用は運用者側の作業)。まだ実際にはデプロイされていない。
-- 未着手: LLMによる自然文の説明パネル(方針だけ決定: ワンショットでCLIを呼び出す形にする。デフォルトは `claude -p`。実装は未着手。D9によりRaspberry Pi上の通常プロセスで動くことが確定したため、この方針のまま実装できる)。
-- Express から Hono への移行は検討の上で見送った([D10](DECISIONS.md#d10-express-から-hono-への移行は今回見送る))。デプロイ先がエッジランタイムでなくなったため、移行の主な動機が無くなったため。
-- `POST /` のレンダリング結果は地図全面表示 + 左上フローティングパネルのレイアウトに変更し、「Copy Map Intent」はその時点の地図の中心座標・ズーム・向きを `render_hints` として反映してからコピーするようにした([D11](DECISIONS.md#d11-地図全面レイアウトとcopy-map-intent時のrender_hints反映))。
-- `GET /` に現在のStaffプロンプト(`hfu/layers-martin` `STAFF_PROMPT.md` から動的取得)を折りたたみ表示するようにした([D13](DECISIONS.md#d13-gettopページに現在のstaffプロンプトを表示する))。
-- 凡例を `layers-martin` D18 の `legend_image_url` 拡張から表示するようになった。表示中のレイヤーのみ、右下、折りたたみ式([D14](DECISIONS.md#d14-凡例現在表示中のレイヤーのみ右下折りたたみ))。以前バックログにあった「凡例が出ない」問題は解消。
-- 構造化エラーフィードバック(`missing_layers`/`unrenderable_layers`)は専用APIではなく、「Copy Map Intent」時にコピーされるMap Intentへ `cartographer_feedback` として埋め込む方式にした([D15](DECISIONS.md#d15-構造化エラーフィードバックはmap-intentへの埋め込みで環流させる))。高性能なStaffエージェントがこれを読み取れば、任意の(optionalな)フィードバック環流経路になる。
-- 必須レイヤーが全滅した場合も専用の失敗画面は作らず、空の地図をそのまま出す方針を確認した([D16](DECISIONS.md#d16-必須レイヤー全滅時は空の地図をそのまま出す))。
-- モバイルファースト(狭い画面でも `GET /`・`POST /` とも崩れないこと)をPlaywrightで確認済み。デジタル庁デザインシステムへの準拠は今後の検討事項としてバックログに追加した。
+- **アーキテクチャは静的SPA**([DECISIONS.md](DECISIONS.md) D18・D21)。Vite + TypeScriptでビルドし、`docs/` に出力してGitHub Pagesで配信する。サーバーは無い。`index.html` + `src/main.ts` が単一ページで、`src/render.ts` の `renderFormView`/`renderMapView` が `#app` の中身を書き換えることで画面を切り替える(実際のページ遷移・HTTPリクエストは発生しない)。
+- 中核パイプライン(`src/mapIntent.ts` → `src/catalog.ts` → `src/style.ts`)は元々環境非依存な純粋関数として書いてあったため、Express撤去時に無改修で移植できた。
+- `hfu/layers-martin` の実カタログ(`https://hfu.github.io/layers-martin/catalog`)に対して実際に動作確認済み。土砂災害警戒区域の検証済み例(標準地図 + 警戒区域3件 + 任意レイヤー1件)が、実際にブラウザで正しく描画されることを Playwright のスクリーンショットで確認した。この例は `src/render.ts` の `EXAMPLE_MAP_INTENT` として初期フォームにそのまま埋め込まれている。
+- テスト19件(`src/*.test.ts`)全パス。`src/catalog.test.ts` は実際に `layers-martin` の生カタログへHTTPで問い合わせる統合テストが中心。CI(`.github/workflows/ci.yml`)は typecheck + test を実行し green。
+- デプロイは `docs/` への静的ビルド。`.github/workflows/build-docs.yml` が `main` への push 時と毎日UTC 19:00のcronでビルドし、差分があればコミット・pushする(cronは `layers-martin` の `STAFF_PROMPT.md` 更新をビルド時fetch経由で追随させるため。D19・D21)。GitHub Pages設定は Settings → Pages → Deploy from a branch → `main:/docs`。以前検討していた自己ホストRaspberry Pi + cloudflaredのデプロイ一式(`deploy/`、systemdユニット、`Justfile` の `serve`、`.env`)は撤去した。
+- LLMはこの世代では組み込まない([DECISIONS.md](DECISIONS.md) D20)。将来必要になれば別APIとして切り出す。
+- `POST /`相当の描画結果は地図全面表示 + 左上フローティングパネルのレイアウト。「Copy Map Intent」はその時点の地図の中心座標・ズーム・向きを `render_hints` として反映してからコピーする([D11](DECISIONS.md#d11-地図全面レイアウトとcopy-map-intent時のrender_hints反映))。
+- `GET /`相当のフォーム画面下部に現在のStaffプロンプト(`hfu/layers-martin` `STAFF_PROMPT.md` からビルド時取得)を折りたたみ表示する([D13](DECISIONS.md#d13-gettopページに現在のstaffプロンプトを表示する)・[D19](DECISIONS.md#d19-staffプロンプトの取得はビルド時fetchに変更する))。
+- 凡例を `layers-martin` D18 の `legend_image_url` 拡張から表示する。表示中のレイヤーのみ、右下、折りたたみ式([D14](DECISIONS.md#d14-凡例現在表示中のレイヤーのみ右下折りたたみ))。
+- 構造化エラーフィードバック(`missing_layers`/`unrenderable_layers`)は専用APIではなく、「Copy Map Intent」時にコピーされるMap Intentへ `cartographer_feedback` として埋め込む方式([D15](DECISIONS.md#d15-構造化エラーフィードバックはmap-intentへの埋め込みで環流させる))。
+- 必須レイヤーが全滅した場合も専用の失敗画面は作らず、空の地図をそのまま出す([D16](DECISIONS.md#d16-必須レイヤー全滅時は空の地図をそのまま出す))。
+- モバイルファースト(狭い画面でも両画面とも崩れないこと)をPlaywrightで確認済み。デジタル庁デザインシステムへの準拠は今後の検討事項としてバックログに残っている。
 
-具体的な設計判断とその理由は [DECISIONS.md](DECISIONS.md) を参照。
+具体的な設計判断とその理由は [DECISIONS.md](DECISIONS.md) を参照。D1・D8・D9・D10・D17 は 2026-07-04 のアーキテクチャ変更でSupersededになっているが、判断の記録として残してある。
 
 ## v1 のスコープ外(意図的に対象外)
 
 - ユーザーアカウント、Map Intent のリクエストを超えた永続化、URLベースの履歴機能
 - `catalog_type: "stac"` の解決(`martin`/`layers_txt` のみ実装。将来追加しやすいようインターフェースは `catalog_type` で分岐する形にしてある)
-- 中核描画パスでのLLM利用
+- 中核描画パスでのLLM利用(この世代では機能自体を実装しない、D20)
 - URLベースの共有機能(ADR 0001 が「Alternatives Considered」として明示的に却下している: クエリ/hash状態、opaqueなpermalink ID、暗号化URLトークン)
 
 ## 参照情報

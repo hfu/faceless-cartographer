@@ -1,35 +1,23 @@
-# faceless-cartographer
-#
-# First-time setup on a fresh clone:
-#   cp .env.example .env   # adjust PORT etc. if needed
-#   just serve
-#
-# `serve` installs dependencies automatically on first run (when
-# node_modules doesn't exist yet) but skips that step on subsequent runs,
-# so restarts (e.g. via systemd) don't depend on network/npm being
-# reachable just to come back up.
+# faceless-cartographer -- static SPA built with Vite, output to docs/ for
+# GitHub Pages (DECISIONS.md D18).
 
 default:
     @just --list
 
-# Install/refresh dependencies. Run this after `git pull` to pick up
-# dependency changes.
 install:
     npm install
 
-# Local development: restarts on file changes, loads .env if present.
+# Local development server with hot reload.
 dev:
-    npx tsx watch --env-file-if-exists=.env src/server.ts
+    npm run dev
 
-# Start the server. This is what systemd's ExecStart runs in production
-# (see deploy/faceless-cartographer.service).
-serve:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [ ! -d node_modules ]; then
-      npm install
-    fi
-    exec npx tsx --env-file-if-exists=.env src/server.ts
+# Refreshes the bundled Staff prompt snapshot, then builds the static site
+# into docs/.
+build:
+    npm run build
+
+preview: build
+    npm run preview
 
 typecheck:
     npm run typecheck

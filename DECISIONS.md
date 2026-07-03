@@ -6,29 +6,33 @@
 
 | # | タイトル | Status | Date |
 |---|---|---|---|
-| [D1](#d1-faceless-な-post-はサーバーへのhttp-postとして実装する) | faceless な `POST /` はサーバーへのHTTP POSTとして実装する | Accepted | 2026-07-02 |
+| [D1](#d1-faceless-な-post-はサーバーへのhttp-postとして実装する) | faceless な `POST /` はサーバーへのHTTP POSTとして実装する | **Superseded by D18** | 2026-07-02 |
 | [D2](#d2-map-intent-のスキーマはmap-intent-vnextmdに文字通り従う) | Map Intent のスキーマは `map-intent-vnext.md` に文字通り従う | Accepted | 2026-07-02 |
 | [D3](#d3-source_id-が解決できない場合は捏造せずmissing_layersとして可視化する) | `source_id` が解決できない場合は捏造せず `missing_layers` として可視化する | Accepted | 2026-07-02 |
 | [D4](#d4-任意レイヤーはスタイルに含めつつ既定で非表示にする) | 任意レイヤーはスタイルに含めつつ既定で非表示にする | Accepted | 2026-07-02 |
 | [D5](#d5-ベクトルタイルはソースのみ追加しレイヤーは描画しない) | ベクトルタイルはソースのみ追加し、レイヤーは描画しない | Accepted | 2026-07-02 |
 | [D6](#d6-初期表示範囲のフォールバック順) | 初期表示範囲のフォールバック順 | Accepted | 2026-07-02 |
 | [D7](#d7-依存パッケージのバージョンは学習知識ではなく実際のレジストリで確認する) | 依存パッケージのバージョンは学習知識ではなく実際のレジストリで確認する | Accepted | 2026-07-02 |
-| [D8](#d8-llm説明パネルは中核パイプラインから分離しワンショットcli呼び出しにする) | LLM説明パネルは中核パイプラインから分離し、ワンショットCLI呼び出しにする | Proposed(未実装) | 2026-07-02 |
-| [D9](#d9-デプロイ先は自己ホストのraspberry-pi-4b--cloudflared) | デプロイ先は自己ホストの Raspberry Pi 4B + cloudflared | Accepted | 2026-07-02 |
-| [D10](#d10-express-から-hono-への移行は今回見送る) | Express から Hono への移行は今回見送る | Rejected(将来再検討あり) | 2026-07-02 |
+| [D8](#d8-llm説明パネルは中核パイプラインから分離しワンショットcli呼び出しにする) | LLM説明パネルは中核パイプラインから分離し、ワンショットCLI呼び出しにする | **Superseded by D20** | 2026-07-02 |
+| [D9](#d9-デプロイ先は自己ホストのraspberry-pi-4b--cloudflared) | デプロイ先は自己ホストの Raspberry Pi 4B + cloudflared | **Superseded by D21** | 2026-07-02 |
+| [D10](#d10-express-から-hono-への移行は今回見送る) | Express から Hono への移行は今回見送る | **Moot(サーバー自体が無くなったため D21 参照)** | 2026-07-02 |
 | [D11](#d11-地図全面レイアウトとcopy-map-intent時のrender_hints反映) | 地図全面レイアウトと Copy Map Intent 時の `render_hints` 反映 | Accepted | 2026-07-02 |
 | [D12](#d12-入力には寛容出力には厳格3リポジトリ間の整合性確認で見つけたギャップの是正) | 入力には寛容、出力には厳格(3リポジトリ間の整合性確認で見つけたギャップの是正) | Accepted | 2026-07-03 |
-| [D13](#d13-gettopページに現在のstaffプロンプトを表示する) | `GET /` トップページに現在のStaffプロンプトを表示する | Accepted | 2026-07-03 |
+| [D13](#d13-gettopページに現在のstaffプロンプトを表示する) | `GET /` トップページに現在のStaffプロンプトを表示する | Accepted(取得方式はD19で変更) | 2026-07-03 |
 | [D14](#d14-凡例現在表示中のレイヤーのみ右下折りたたみ) | 凡例(現在表示中のレイヤーのみ・右下・折りたたみ) | Accepted | 2026-07-03 |
 | [D15](#d15-構造化エラーフィードバックはmap-intentへの埋め込みで環流させる) | 構造化エラーフィードバックはMap Intentへの埋め込みで環流させる | Accepted | 2026-07-03 |
 | [D16](#d16-必須レイヤー全滅時は空の地図をそのまま出す) | 必須レイヤー全滅時は空の地図をそのまま出す | Accepted | 2026-07-03 |
-| [D17](#d17-静的サイト化ではなく現状のexpressraspberry-piを維持デプロイはjustenvで統一) | 静的サイト化ではなく現状の Express/Raspberry Pi を維持、デプロイは `just`/`.env` で統一 | Accepted | 2026-07-03 |
+| [D17](#d17-静的サイト化ではなく現状のexpressraspberry-piを維持デプロイはjustenvで統一) | 静的サイト化ではなく現状の Express/Raspberry Pi を維持、デプロイは `just`/`.env` で統一 | **Superseded by D21** | 2026-07-03 |
+| [D18](#d18-getpost-の二面性ではなく単一ページのクライアント側遷移spaとする) | GET/POST の二面性ではなく、単一ページのクライアント側遷移(SPA)とする | Accepted | 2026-07-04 |
+| [D19](#d19-staffプロンプトの取得はビルド時fetchに変更する) | Staffプロンプトの取得はビルド時fetchに変更する | Accepted | 2026-07-04 |
+| [D20](#d20-この世代のcartographerにはllmを載せない) | この世代のCartographerにはLLMを載せない | Accepted | 2026-07-04 |
+| [D21](#d21-静的サイトとしてdocsに出力しgithub-pagesでホストする) | 静的サイトとして `docs/` に出力し、GitHub Pagesでホストする | Accepted | 2026-07-04 |
 
 ---
 
 ## D1: faceless な `POST /` はサーバーへのHTTP POSTとして実装する
 
-**Status**: Accepted
+**Status**: Superseded by [D18](#d18-getpost-の二面性ではなく単一ページのクライアント側遷移spaとする)(2026-07-04)。以下は当時の判断記録として残す。
 
 **Context**: 当初、中核描画パイプラインにLLMが不要であること([HANDOVER.md](HANDOVER.md)参照)を踏まえ、Vite + TypeScriptによる完全クライアントサイドの静的サイト(GitHub Pages等にデプロイ可能、サーバー不要)として実装する案を検討した。`hfu/layers-martin` のカタログがCORSを許可している(`Access-Control-Allow-Origin: *`)ことを確認し、ブラウザから直接 `fetch` してカタログ解決・スタイル構築・描画まで完結できることも確認済みだった。
 
@@ -100,7 +104,7 @@
 
 ## D8: LLM説明パネルは中核パイプラインから分離し、ワンショットCLI呼び出しにする
 
-**Status**: Proposed(未実装)
+**Status**: Superseded by [D20](#d20-この世代のcartographerにはllmを載せない)(2026-07-04)。この世代ではLLM機能自体を実装しないことにした。以下は当時の判断記録として残す。
 
 **Context**: Cartographer の中核描画パスにLLMを持ち込まない方針(HANDOVER.md参照)がある一方、将来的に地図に添える自然文の説明を生成する機能はあってよいと考えている。ブラウザからCLIツールを直接実行することはできない。
 
@@ -110,7 +114,7 @@
 
 ## D9: デプロイ先は自己ホストの Raspberry Pi 4B + cloudflared
 
-**Status**: Accepted
+**Status**: Superseded by [D21](#d21-静的サイトとしてdocsに出力しgithub-pagesでホストする)(2026-07-04)。以下は当時の判断記録として残す。
 
 **Context**: デプロイ先の検討にあたり、Cloudflare Workers 等のエッジランタイムへのデプロイも選択肢として検討した(D10参照)。エッジは無料枠が大きくサーバー管理が不要という利点があるが、D8 で決めた「LLM呼び出しはワンショットのCLIサブプロセス(`claude -p`)」という方針とは根本的に非互換(エッジランタイムには `child_process` もファイルシステムも無い)。
 
@@ -120,7 +124,7 @@
 
 ## D10: Express から Hono への移行は今回見送る
 
-**Status**: Rejected(将来再検討の余地あり)
+**Status**: Moot(2026-07-04)。[D18](#d18-getpost-の二面性ではなく単一ページのクライアント側遷移spaとする)/[D21](#d21-静的サイトとしてdocsに出力しgithub-pagesでホストする)によりExpress自体を撤去したため、この判断は前提ごと無くなった。以下は当時の判断記録として残す。
 
 **Context**: Hono はWeb Standardsベースで書かれており、Node/Cloudflare Workers/Deno/Bunなど複数ランタイムで同一コードが動く。当初、デプロイ先としてCloudflare Workersのようなエッジランタイムを検討していたため、移行の是非を検討した。現在のExpress利用は薄く(ルート2つ、ミドルウェア2つ)、テストもExpressのルーティング自体には依存していないため、移行コスト自体は小さいと分かった。
 
@@ -169,6 +173,8 @@
 
 **Consequences**: `GET /` が外部リポジトリへの実際のライブ依存を1つ持つことになる(Cartographerの中核描画パス自体は引き続き依存しない — `POST /` の描画ロジックには一切関与しない)。フォールバックファイルは手動更新が必要で、`STAFF_PROMPT.md` の構成(フェンス記法)が変わった場合、抽出に失敗して全文表示にフォールバックする(壊れた表示にはならない設計)。
 
+**2026-07-04 追記**: 静的サイト化([D21](#d21-静的サイトとしてdocsに出力しgithub-pagesでホストする))に伴い、取得方式を「リクエスト時にサーバーがライブ取得(10分キャッシュ)」から「ビルド時に取得してバンドルに焼き込む」に変更した([D19](#d19-staffプロンプトの取得はビルド時fetchに変更する))。表示すること自体の決定(この節)は変わっていない。
+
 ## D14: 凡例(現在表示中のレイヤーのみ・右下・折りたたみ)
 
 **Status**: Accepted
@@ -201,7 +207,7 @@
 
 ## D17: 静的サイト化ではなく現状のExpress/Raspberry Piを維持、デプロイは`just`/`.env`で統一
 
-**Status**: Accepted
+**Status**: Superseded by [D21](#d21-静的サイトとしてdocsに出力しgithub-pagesでホストする)(2026-07-04)。D8(LLM CLIサブプロセス)を見送ったことで、この判断の前提が変わった。以下は当時の判断記録として残す。
 
 **Context**: 実装が進み、中核パイプライン(`mapIntent.ts`/`catalog.ts`/`style.ts`)が環境非依存であること、`layers-martin` のカタログがCORSを許可していることが分かった時点で、「そもそも動的サーバーである必要があるか、静的サイト化できないか」を改めて検討した。
 
@@ -219,6 +225,60 @@
 - `deploy/README.md` を、実際に「clone → `.env` をコピー → `just serve`」で起動できる手順に更新した。
 
 **Consequences**: `git clone` してから `cp .env.example .env && just serve` の2手順(3コマンド)でサーバーが立ち上がることをローカルで実際に確認した(初回はnpm installが走り、2回目以降はスキップされて即起動することも確認済み)。将来的にD8のCLIサブプロセス方針自体を見直す(例: HTTP API呼び出し方式に変更する)場合、この判断(静的サイト化しないこと)も同時に再検討の対象になる。
+
+**2026-07-04 追記**: 結局この判断は約1日で覆った。D8自体を見送ったことで前提が変わったため([D20](#d20-この世代のcartographerにはllmを載せない)参照)、静的サイト化しない理由が無くなった。`Justfile`/`.env`/systemdユニット一式は [D21](#d21-静的サイトとしてdocsに出力しgithub-pagesでホストする) で撤去した。
+
+## D18: GET/POST の二面性ではなく、単一ページのクライアント側遷移(SPA)とする
+
+**Status**: Accepted
+
+**Context**: D1 で「`POST /` は文字通りサーバー側のHTTP POSTとして実装する」と決めていたが、これは実装してみると次のような「トリッキーさ」を伴っていた。
+
+- `GET /` と `POST /` という2つの別レスポンスを、同じサーバーの同じルートで作り分ける必要があり、`src/server.ts`/`src/render.ts` の責務が「サーバー」と「HTMLテンプレート生成」に分かれ、両者の対応関係を頭の中で保持しながら実装する必要があった。
+- 実際にはフォーム送信も地図描画も、ブラウザの中で完結する処理(YAMLパース・カタログfetch・スタイル構築・MapLibre初期化)であり、サーバーは実質「HTML文字列を組み立てて返すだけ」の薄い層になっていた。
+- D20(この世代ではLLMを載せない)が決まったことで、「サーバーでなければできないこと」がこの時点で実質何も無くなった。
+
+**Decision**: 単一の `index.html` + `src/main.ts` によるSPA(Single Page Application)とする。`renderFormView`/`renderMapView`(`src/render.ts`)が `#app` 要素の中身を書き換えることで画面を切り替える。フォームの送信は `<form>` の `submit` イベントを `preventDefault()` して `main.ts` 側のハンドラに渡すだけで、実際のHTTPリクエストは発生しない。「戻る」ボタンも同様にDOM書き換えで前の画面に戻る。ブラウザのURL・履歴は一切変化しない(遷移という概念自体が無い)。
+
+`unopengis/staccato-spec` の `ADR 0001` は「`GET /` MUST return an HTML page」「`POST /` MUST accept Map Intent and render map output」という文字通りの規定を持つが、SPAでは「`POST /` へのHTTPリクエスト」自体が発生しない。これはADR 0001の**精神**(URLに状態を持たせない、Map Intentのテキストが共有の一次artifact、人間が仲介する受け渡し)には完全に沿うが、**文言**とは厳密には一致しない、意図的な逸脱である。spec repoを直接改訂する権限はこちらには無いため、ここに明示的に記録する。むしろSPAはURLが一切変化しないぶん、「faceless」の趣旨をより徹底して満たす形になっているとも言える。
+
+**Consequences**: D1・D17 を置き換える。`express` 依存を削除。`src/server.ts` を削除。`src/mapIntent.ts`/`src/catalog.ts`/`src/style.ts` は元々環境非依存な純粋関数として書いてあったため、無改修で移植できた(この設計判断が今回活きた形になる)。`src/render.ts` は「HTML文字列を返す関数」から「DOMに書き込み、イベントリスナーを結線する関数」に書き換えた。ビルドツールは `hfu/attachbar` の `examples/mgrs-pmtiles` に倣い Vite を採用した(D21参照)。
+
+## D19: Staffプロンプトの取得はビルド時fetchに変更する
+
+**Status**: Accepted
+
+**Context**: D13(`GET /` に現在のStaffプロンプトを表示する)は、サーバーがリクエストごとに(10分キャッシュ付きで)ライブ取得する実装だった。D21(静的サイト化)により、リクエストを受けて処理するサーバー自体が無くなる。
+
+**Decision**: `scripts/fetch-staff-prompt.mjs` を `npm run build` の `prebuild` フックとして実行し、`hfu/layers-martin` の `STAFF_PROMPT.md` を取得して `src/staff-prompt.txt` に書き込む。アプリ本体(`src/main.ts`)はこのファイルを `?raw` インポート(Vite)でビルド時にバンドルへ焼き込むだけで、実行時のfetchは一切行わない。取得に失敗した場合は既存の `src/staff-prompt.txt` を上書きしない(直前の成功時点のスナップショットを保持する、フェイルセーフ)。
+
+**Consequences**: サイトは完全に静的(実行時に外部リポジトリへ依存しない)になった。表示内容の鮮度は「最後にビルドされた時点」までとなるため、`layers-martin` 側の `STAFF_PROMPT.md` 更新を追随させるには再ビルドが要る。これは [D21](#d21-静的サイトとしてdocsに出力しgithub-pagesでホストする) の日次cronで解決する。
+
+## D20: この世代のCartographerにはLLMを載せない
+
+**Status**: Accepted
+
+**Context**: D8 は、地図に添える自然文の説明を生成するLLM機能を、`claude -p` のワンショットCLIサブプロセスとして実装する方針だった。この世代の `faceless-cartographer` が実際に扱うデータは、`hfu/layers-martin` のカタログが示す通り画像タイル(ラスター)が中心であり(D5: ベクトルタイルは2026-07-04時点で0件)、LLMによる自然文説明が無くても地図としては十分に完結する。CLIサブプロセスの実行には実プロセス(Node常駐サーバー)が必要で、これがD9(Raspberry Piデプロイ)を選んだ主な理由になっていた。
+
+**Decision**: この世代の Cartographer にはLLM機能を組み込まない。将来LLMによる説明機能が欲しくなった場合は、Cartographer本体に埋め込む(CLIサブプロセスを起動する等)のではなく、**別の呼び出し可能なAPI**として切り出す。Cartographer側は、そのAPIをオプションで呼び出す(あるいはAPIの結果を表示するだけの)薄いクライアントに留め、コア機能(地図描画)がAPIの有無に依存しないようにする。
+
+**Consequences**: D8 を置き換える。LLMが不要になったことで、Cartographer全体を静的サイト化する制約が無くなった([D21](#d21-静的サイトとしてdocsに出力しgithub-pagesでホストする)参照)。将来API方式で実装する際は、認証・レート制限・コストの管理を誰がどこで担うか(Cartographer自体は静的なので、API呼び出しには別途バックエンドかサーバーレス関数が要る)を改めて検討する必要がある。
+
+## D21: 静的サイトとして `docs/` に出力し、GitHub Pagesでホストする
+
+**Status**: Accepted
+
+**Context**: D18(SPA化)とD20(LLMを載せない)が決まったことで、Cartographerが動的サーバーである必要が無くなった。デプロイ先の再検討にあたり、`hfu/layers-martin`(`docs/` をGitHub Pagesで公開)と `hfu/attachbar`(`examples/mgrs-pmtiles` を同様に `docs/` へViteビルドしGitHub Pages公開)という、ユーザーが日常的に使っている2つの既存パターンを参考にした。
+
+**Decision**: `vite.config.ts` で `base: './'`(GitHub Pagesのプロジェクトサイトは `https://<user>.github.io/<repo>/` というサブパスで配信されるため相対パス化)・`build.outDir: 'docs'`・`build.emptyOutDir: true` を設定し、`npm run build` で `docs/` に出力する。`public/.nojekyll` を配置し、Jekyll処理を無効化する(`hfu/attachbar` と同じ)。`docs/` は `.gitignore` の対象外とし、コミットしてGitHub Pages(Settings → Pages → Deploy from a branch → main:/docs)から配信する。
+
+ビルドの自動化は `.github/workflows/build-docs.yml` で行う: `main` への push 時、および毎日 UTC 19:00 の cron(`hfu/layers-martin` の日次カタログ更新とは独立に、Staffプロンプトのビルド時fetch(D19)を追随させるため)に、typecheck・test・buildを実行し、`docs/` に差分があれば `hfu/layers-martin` の `build-catalog.yml` と同じ「差分があればコミット・無ければ何もしない」パターンでコミット・pushする。
+
+Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクトリ、systemdユニット、`Justfile` の `serve`、`.env`)は撤去した。
+
+**Consequences**: D9・D17 を置き換える。`express`/`@types/express` 依存を削除。ホスティング費用が完全に無くなり、可用性はGitHub Pagesに委ねられる(自宅サーバーの電源・回線・故障リスクから解放される)。将来D20を再検討してLLM機能を追加する場合、この判断も連動して見直す必要がある(コア機能は静的のまま維持し、LLM部分だけ別APIとして追加する形を想定)。
+
+## バックログ(未決定・保留)
 
 ### 凡例(legend)が画面上で分からない(解消: D14 + layers-martin D18)
 

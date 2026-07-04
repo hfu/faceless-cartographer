@@ -1,4 +1,4 @@
-import type { MapIntent, ResolvedLayer } from './types.ts';
+import type { MapIntent, ResolvedLayer, VectorLayerDescriptor } from './types.ts';
 
 // A minimal MapLibre style object. Typed loosely here (rather than pulling in
 // the maplibre-gl package as a server dependency) since MapLibre GL JS itself
@@ -13,6 +13,58 @@ export interface MapLibreStyle {
 
 function isVectorTileUrl(url: string): boolean {
   return /\.(pbf|mvt)(\?|$)/i.test(url);
+}
+
+// Generic paint for a vector source-layer whose actual geometry type isn't
+// known ahead of time (TileJSON's vector_layers doesn't declare it). Rather
+// than guess per layer name/schema (which would tie this code to one
+// catalog's naming convention, e.g. stars.optgeo.org's 基盤地図情報 layers),
+// add one style layer per geometry type, each filtered with the
+// `["geometry-type"]` expression -- MapLibre simply renders nothing for a
+// filter that matches no features in that source-layer, so this stays
+// correct for any vector catalog that publishes vector_layers, not just the
+// one this was written against.
+function buildVectorSubLayers(sourceId: string, vectorLayers: VectorLayerDescriptor[], visible: string): MapLibreStyle['layers'] {
+  const out: MapLibreStyle['layers'] = [];
+  for (const vl of vectorLayers) {
+    const zoomBounds: Record<string, unknown> = {};
+    if (vl.minzoom !== undefined) zoomBounds.minzoom = vl.minzoom;
+    if (vl.maxzoom !== undefined) zoomBounds.maxzoom = vl.maxzoom;
+
+    out.push(
+      {
+        id: `${sourceId}__${vl.id}__fill`,
+        type: 'fill',
+        source: sourceId,
+        'source-layer': vl.id,
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: { 'fill-color': '#5b7c99', 'fill-opacity': 0.25 },
+        layout: { visibility: visible },
+        ...zoomBounds
+      },
+      {
+        id: `${sourceId}__${vl.id}__line`,
+        type: 'line',
+        source: sourceId,
+        'source-layer': vl.id,
+        filter: ['==', ['geometry-type'], 'LineString'],
+        paint: { 'line-color': '#3a5a75', 'line-width': 1 },
+        layout: { visibility: visible },
+        ...zoomBounds
+      },
+      {
+        id: `${sourceId}__${vl.id}__circle`,
+        type: 'circle',
+        source: sourceId,
+        'source-layer': vl.id,
+        filter: ['==', ['geometry-type'], 'Point'],
+        paint: { 'circle-color': '#3a5a75', 'circle-radius': 2 },
+        layout: { visibility: visible },
+        ...zoomBounds
+      }
+    );
+  }
+  return out;
 }
 
 // Layer ordering: required layers first (so a base map listed first in
@@ -36,15 +88,12 @@ export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { styl
 
     const tileUrl = layer.tilejson.tiles[0];
     const visible = layer.required ? 'visible' : 'none';
-
-    if (isVectorTileUrl(tileUrl)) {
-      // Vector tile TileJSON from layers-martin deliberately omits
-      // vector_layers (source-layer names can't be recovered from
-      // layers.txt alone -- see that repo's DECISIONS.md D7), so a
-      // meaningful paint/fill layer can't be constructed generically. Add
-      // the source for completeness but skip adding a renderable layer,
-      // and surface this as a known limitation rather than guessing at a
-      // source-layer name.
+    const hasVectorLayers = (layer.tilejson.vector_layers?.length ?? 0) > 0;
+    // A real Martin server's tile URLs don't necessarily carry a file
+    // extension (e.g. stars.optgeo.org's are .../{z}/{x}/{y} with no
+    // suffix), so a vector_layers presence is treated as an equally strong
+    // signal as the URL looking like a vector tile.
+    if (isVectorTileUrl(tileUrl) || hasVectorLayers) {
       sources[sourceId] = {
         type: 'vector',
         tiles: layer.tilejson.tiles,
@@ -53,7 +102,18 @@ export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { styl
         bounds: layer.tilejson.bounds,
         attribution: layer.tilejson.attribution
       };
-      unrenderable.push(sourceId);
+
+      // Some vector catalogs (e.g. a real Martin server like
+      // stars.optgeo.org, inspecting actual MVT contents) publish
+      // vector_layers; hfu/layers-martin deliberately can't (D7: can't
+      // recover source-layer names from layers.txt alone). Only render
+      // when the schema is actually known -- guessing a source-layer name
+      // would be worse than not rendering at all.
+      if (hasVectorLayers) {
+        layers.push(...buildVectorSubLayers(sourceId, layer.tilejson.vector_layers!, visible));
+      } else {
+        unrenderable.push(sourceId);
+      }
       continue;
     }
 

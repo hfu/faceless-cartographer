@@ -51,6 +51,40 @@ describe('resolveLayers (integration, live layers-martin catalog)', () => {
   }, 20000);
 });
 
+describe('resolveLayers (integration, multiple live catalogs)', () => {
+  // Confirms the "no aggregator needed" architecture decision (see
+  // DECISIONS.md D23): Staff can simply list a second, unrelated
+  // catalog_type "martin" catalog alongside hfu/layers-martin in one Map
+  // Intent's catalog_context.active_catalogs, and both resolve without any
+  // merging step anywhere. stars.optgeo.org is a real, independently
+  // operated Martin server (not a static mirror), and its "bvmap" layer
+  // publishes full vector_layers (GSI's optimal vector tile basemap
+  // schema) that hfu/layers-martin structurally can't provide (D7).
+  it('resolves layers from two unrelated catalogs (layers-martin + a real Martin server) in one intent', async () => {
+    const intent: MapIntent = {
+      spec_version: 'map-intent/v2',
+      goal: 'test multi-catalog resolution',
+      catalog_context: {
+        active_catalogs: [
+          { id: 'layers-martin', type: 'layers_txt', uri: 'https://hfu.github.io/layers-martin/catalog' },
+          { id: 'stars-optgeo', type: 'martin', uri: 'https://stars.optgeo.org/catalog' }
+        ]
+      },
+      required_layers: [{ source_id: 'std' }, { source_id: 'bvmap' }],
+      provenance: { generated_by: 'test', generated_at: '2026-07-04T00:00:00Z', intent_id: 'test' }
+    };
+
+    const { resolved, missing } = await resolveLayers(intent);
+
+    expect(missing).toEqual([]);
+    const std = resolved.find((r) => r.source_id === 'std');
+    const bvmap = resolved.find((r) => r.source_id === 'bvmap');
+    expect(std?.catalog_id).toBe('layers-martin');
+    expect(bvmap?.catalog_id).toBe('stars-optgeo');
+    expect(bvmap?.tilejson.vector_layers?.length).toBeGreaterThan(0);
+  }, 20000);
+});
+
 describe('resolveLayers (permissive input, mocked catalog)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

@@ -8,7 +8,7 @@ Cartographer implementation for the Staccato architecture (see [`unopengis/stacc
 
 ## Status
 
-Static SPA, builds to `docs/` for GitHub Pages. Works end-to-end against the live `layers-martin` catalog, including a worked acceptance-test Map Intent (background map + three sediment-hazard overlays + one optional layer) — verified with an actual headless-browser screenshot, not just HTTP status codes.
+Static SPA, builds to `docs/` for GitHub Pages. Works end-to-end against the live `layers-martin` catalog, including a worked acceptance-test Map Intent (background map + three sediment-hazard overlays + one optional layer) — verified with an actual headless-browser screenshot, not just HTTP status codes. Also verified against a second, independently-operated live catalog (`stars.optgeo.org/catalog`, a real Martin server) in the same Map Intent, including genuine vector-tile rendering of its `bvmap` layer (D23) — no catalog-aggregator repository needed, since Map Intent already supports multiple `active_catalogs`.
 
 ## Try it
 
@@ -39,7 +39,7 @@ index.html + src/main.ts (SPA shell, no routing)
 
 - `src/mapIntent.ts` — parses and validates a submitted Map Intent against `map-intent-vnext.md`'s schema. Rejects invalid/incomplete intents with a clear error rather than guessing.
 - `src/catalog.ts` — resolves each `required_layers`/`optional_layers` `source_id` against `catalog_context.active_catalogs` (currently supports `catalog_type: "martin"` and `"layers_txt"`; `"stac"` is out of scope for v1). Honors `resolution_policy.precedence`/`first_match`. Unresolvable `source_id`s are reported as `missing`, never fabricated.
-- `src/style.ts` — builds a MapLibre style (sources + layers) from resolved TileJSON, and picks an initial view (`render_hints` → `area.bbox` → combined bounds of required layers → a Japan-wide default).
+- `src/style.ts` — builds a MapLibre style (sources + layers) from resolved TileJSON, and picks an initial view (`render_hints` → `area.bbox` → combined bounds of required layers → a Japan-wide default). Vector tile sources whose TileJSON carries `vector_layers` (a real Martin server inspecting actual MVT contents, e.g. `stars.optgeo.org`'s `bvmap`) are rendered generically — fill/line/circle per source-layer, filtered by geometry type (D23).
 - `src/render.ts` — builds the form view and the map view by writing into the `#app` DOM node and wiring event listeners. No page navigation, ever (D18).
 - `src/main.ts` — the whole app: shows the form, and on submit runs the pipeline above and swaps in the map view.
 - `scripts/fetch-staff-prompt.mjs` — a build-time (`prebuild`) script that refreshes `src/staff-prompt.txt` from `hfu/layers-martin`'s live `STAFF_PROMPT.md`, bundled via Vite's `?raw` import (D19). No runtime fetch.
@@ -63,6 +63,6 @@ Static site, built to `docs/` and served by GitHub Pages (`base: './'` in `vite.
 
 ## Known limitations (v1)
 
-- Vector tile (`.pbf`/`.mvt`) sources are added to the MapLibre style but no layer is rendered for them, since `layers-martin`'s TileJSON doesn't include `vector_layers` (can't be recovered from `layers.txt` alone). Not currently exercised by the reference catalog, which has zero vector layers as of 2026-07-04. See [`DECISIONS.md`](DECISIONS.md) D5.
+- Vector tile sources are only rendered when their TileJSON carries `vector_layers` (D23). `layers-martin`'s TileJSON doesn't include it (can't be recovered from `layers.txt` alone, D7), so its vector tiles — none exist in the reference catalog as of 2026-07-04 anyway — would still show up as `unrenderable`. A real Martin server like `stars.optgeo.org` does publish `vector_layers` and renders correctly; see D23. Styling is generic per geometry type (fill/line/circle), not tailored per layer semantics (e.g. `BldA` = buildings, `RdCL` = road centerlines) — backlogged.
 - No LLM explanation feature, by design this generation (see [`DECISIONS.md`](DECISIONS.md) D20).
 - Not yet compliant with Japan's Digital Agency design system ([design.digital.go.jp](https://design.digital.go.jp/)) — backlogged in [`DECISIONS.md`](DECISIONS.md).

@@ -233,10 +233,29 @@ export function renderMapView(
   }
   renderLegend();
 
+  // A raster source has exactly one MapLibre layer named after its
+  // source_id. A vector source with a known schema (D23) expands to several
+  // fill/line/circle sub-layers (one set per source-layer, see
+  // buildVectorSubLayers in style.ts) that all share `source: sourceId` but
+  // have their own ids -- toggle every layer belonging to a source_id
+  // together, not just one assumed to be named after it.
+  const layerIdsBySourceId = new Map<string, string[]>();
+  for (const styleLayer of style.layers) {
+    const source = (styleLayer as { source?: string }).source;
+    const id = (styleLayer as { id: string }).id;
+    if (!source) continue;
+    const list = layerIdsBySourceId.get(source) ?? [];
+    list.push(id);
+    layerIdsBySourceId.set(source, list);
+  }
+
   container.querySelectorAll<HTMLInputElement>('[data-layer-toggle]').forEach((el) => {
     el.addEventListener('change', () => {
       const id = el.getAttribute('data-layer-toggle')!;
-      map.setLayoutProperty(id, 'visibility', el.checked ? 'visible' : 'none');
+      const layerIds = layerIdsBySourceId.get(id) ?? [];
+      for (const layerId of layerIds) {
+        map.setLayoutProperty(layerId, 'visibility', el.checked ? 'visible' : 'none');
+      }
       visibility.set(id, el.checked);
       renderLegend();
     });

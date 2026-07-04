@@ -28,6 +28,7 @@
 | [D20](#d20-この世代のcartographerにはllmを載せない) | この世代のCartographerにはLLMを載せない | Accepted | 2026-07-04 |
 | [D21](#d21-静的サイトとしてdocsに出力しgithub-pagesでホストする) | 静的サイトとして `docs/` に出力し、GitHub Pagesでホストする | Accepted | 2026-07-04 |
 | [D22](#d22-staffプロンプトにコピーボタンを追加しsummary内のリンクを外に出す) | Staffプロンプトにコピーボタンを追加し、`<summary>`内のリンクを外に出す | Accepted | 2026-07-04 |
+| [D23](#d23-vector_layersスキーマが既知のベクトルタイルは幾何タイプ別に汎用描画する複数カタログ統合はaggregatorを作らずmap-intentの複数active_catalogsで実現する) | `vector_layers`スキーマが既知のベクトルタイルは幾何タイプ別に汎用描画する。複数カタログ統合はaggregatorを作らずMap Intentの複数`active_catalogs`で実現する | Accepted | 2026-07-04 |
 
 ---
 
@@ -288,6 +289,16 @@ Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクト
 **Decision**: 「Copy Map Intent」ボタン(D11)と同じパターンで「Copy Staff Prompt」ボタンを追加した。クリップボードへコピーするのは表示用にHTMLエスケープしたテキストではなく、`extractStaffPromptBlock` が返す生のプレーンテキスト。あわせて、`<summary>` からリンクを除去し、`<summary>現在の Staff プロンプト</summary>` という短いテキストのみにした。取得元へのリンクは、`<details>` の中身(展開後に見える説明文中)に移動した。これにより `<summary>` 全体が確実に開閉のトグル領域として機能する。
 
 **Consequences**: Playwrightで、(a) `<summary>` クリックで `<details>` が開くこと、(b) 「Copy Staff Prompt」でクリップボードに正しい内容(プロンプト本文、約6,900文字)が入ること、(c) ボタンラベルが一時的に "Copied!" に変わることを確認した。既存の19件のテストと型チェックには影響なし(この変更はDOM/UIのみ)。
+
+## D23: `vector_layers`スキーマが既知のベクトルタイルは幾何タイプ別に汎用描画する。複数カタログ統合はaggregatorを作らずMap Intentの複数`active_catalogs`で実現する
+
+**Status**: Accepted
+
+**Context**: layers-martin側で「stars.optgeo.org/catalog(実際に稼働しているMartinサーバー)を追加できないか」という検討依頼があった。目玉は国土地理院最適化ベクトルタイル(`bvmap`)で、これがStaffにベースマップベクトルタイルという新しい選択肢を開く。検討の結果、専用のaggregatorリポジトリを作る必要はなく、Map Intentの`catalog_context.active_catalogs`が最初から複数カタログの併記を許容している(spec上、`type: "layers_txt"`のlayers-martinと`type: "martin"`のstars.optgeo.orgを1つのintentに混在させることに何の障害もない)ことをNode script実測で確認した(オプションC)。一方、faceless-cartographer側には別の問題があった: `bvmap`のようなベクトルタイルはD5・D7の時点で「レンダリングできないので`unrenderable`として無視する」方針だった。この方針のままでは、stars.optgeo.orgを繋いでも目玉であるはずのベクトル基盤地図が画面に何も表示されない。
+
+**Decision**: 2つの変更を行った。(1) `catalog.ts`・`resolveLayers`は変更不要 -- 複数`active_catalogs`はすでに扱えていた。統合(aggregation)のための別リポジトリは作らない。(2) `style.ts`に、TileJSONの`vector_layers`配列(実サーバーが実際のMVT内容を検査して返す、source-layerごとのスキーマ情報)が存在する場合の描画パスを追加した。特定のカタログのレイヤー命名規則に依存しないよう、レイヤー名ごとに意味を推測するのではなく、`source-layer`ごとに`["geometry-type"]`式でフィルタしたfill/line/circleの3スタイルレイヤーを機械的に生成する(`buildVectorSubLayers`)。`vector_layers`が存在しない(=hfu/layers-martinのようにlayers.txtからは復元できない)ベクトルタイルは、従来通り`unrenderable`として報告するのみに留める。また、ベクトルタイルかどうかの判定を、URLの拡張子(`.pbf`/`.mvt`)だけでなく`vector_layers`の有無でも行うようにした -- stars.optgeo.orgの実際のタイルURL(`https://stars.optgeo.org/bvmap/{z}/{x}/{y}`)には拡張子がないため。
+
+**Consequences**: `catalog.test.ts`に、layers-martin(`std`)とstars.optgeo.org(`bvmap`)を1つのintentから同時解決する統合テストを追加(実ネットワーク、両catalog_idが正しく紐づくことを確認)。`style.test.ts`に、`vector_layers`が既知のケース(source-layerごとに3スタイルレイヤー生成)と、空配列は従来通り`unrenderable`のままであることを確認するテストを追加。Playwrightで実際にstars.optgeo.orgの`bvmap`を読み込み、東京都心の道路・水域・建物のポリゴンが実際に描画されることをスクリーンショットで確認した。Cartographerは今後、`vector_layers`を公開するどのMartinサーバーに対しても(stars.optgeo.orgに限らず)同じ仕組みで汎用描画できる。ジオメトリタイプ別の配色は暫定的なもので、レイヤー名(例: `BldA`=建物、`RdCL`=道路中心線)に応じた意味的なスタイリングは将来のバックログ。
 
 ## バックログ(未決定・保留)
 

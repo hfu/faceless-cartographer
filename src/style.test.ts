@@ -31,7 +31,7 @@ describe('buildStyle', () => {
     expect(unrenderable).toEqual([]);
   });
 
-  it('adds a source but no renderable layer for vector tiles, and flags it', () => {
+  it('adds a source but no renderable layer for vector tiles with no known schema, and flags it', () => {
     const resolved: ResolvedLayer[] = [
       { source_id: 'std', required: true, catalog_id: 'x', tilejson: tilejson(['https://e/std/{z}/{x}/{y}.png']) },
       { source_id: 'hazard', required: true, catalog_id: 'x', tilejson: tilejson(['https://e/h/{z}/{x}/{y}.pbf']) }
@@ -42,6 +42,52 @@ describe('buildStyle', () => {
     expect(Object.keys(style.sources)).toContain('hazard');
     expect(style.layers.map((l) => l.id)).toEqual(['std']);
     expect(unrenderable).toEqual(['hazard']);
+  });
+
+  // A real Martin server (e.g. stars.optgeo.org) can inspect actual MVT
+  // contents and publish vector_layers; hfu/layers-martin can't (D7).
+  // When the schema is known, render generically per source-layer instead
+  // of giving up -- see DECISIONS.md D23.
+  it('renders fill/line/circle sub-layers per vector_layers entry when the schema is known', () => {
+    const resolved: ResolvedLayer[] = [
+      {
+        source_id: 'bvmap',
+        required: true,
+        catalog_id: 'stars',
+        tilejson: tilejson(['https://stars.optgeo.org/bvmap/{z}/{x}/{y}'], {
+          vector_layers: [
+            { id: 'BldA', minzoom: 14, maxzoom: 16 },
+            { id: 'RdCL', minzoom: 4, maxzoom: 16 }
+          ]
+        })
+      }
+    ];
+    const bvmapIntent: MapIntent = { ...intent, required_layers: [{ source_id: 'bvmap' }], optional_layers: [] };
+
+    const { style, unrenderable } = buildStyle(bvmapIntent, resolved);
+
+    expect(unrenderable).toEqual([]);
+    expect(style.sources.bvmap.type).toBe('vector');
+    // 2 source-layers x 3 geometry types = 6 style layers.
+    expect(style.layers).toHaveLength(6);
+    expect(style.layers.map((l) => l.id)).toEqual(
+      expect.arrayContaining(['bvmap__BldA__fill', 'bvmap__BldA__line', 'bvmap__BldA__circle', 'bvmap__RdCL__fill', 'bvmap__RdCL__line', 'bvmap__RdCL__circle'])
+    );
+    const bldaFill = style.layers.find((l) => l.id === 'bvmap__BldA__fill')!;
+    expect(bldaFill.source).toBe('bvmap');
+    expect(bldaFill['source-layer']).toBe('BldA');
+    expect(bldaFill.minzoom).toBe(14);
+    expect(bldaFill.maxzoom).toBe(16);
+    expect((bldaFill.filter as unknown[])[1]).toEqual(['geometry-type']);
+  });
+
+  it('an empty vector_layers array is treated the same as absent (still unrenderable)', () => {
+    const resolved: ResolvedLayer[] = [
+      { source_id: 'hazard', required: true, catalog_id: 'x', tilejson: tilejson(['https://e/h/{z}/{x}/{y}.pbf'], { vector_layers: [] }) }
+    ];
+    const { style, unrenderable } = buildStyle({ ...intent, required_layers: [{ source_id: 'hazard' }], optional_layers: [] }, resolved);
+    expect(unrenderable).toEqual(['hazard']);
+    expect(style.layers).toHaveLength(0);
   });
 });
 

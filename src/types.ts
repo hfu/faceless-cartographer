@@ -62,8 +62,21 @@ export interface MapIntent {
   [key: string]: unknown;
 }
 
+// TileJSON's vector_layers entry (present when a real Martin server can
+// inspect actual MVT contents, e.g. stars.optgeo.org -- absent from
+// hfu/layers-martin's TileJSON since it can't recover this from layers.txt
+// alone, D7 there).
+export interface VectorLayerDescriptor {
+  id: string;
+  fields?: Record<string, string>;
+  minzoom?: number;
+  maxzoom?: number;
+  description?: string;
+}
+
 // TileJSON 3.0.0 (loose), as served by a Martin-compatible Library such as
-// hfu/layers-martin. Only the fields Cartographer actually reads are typed.
+// hfu/layers-martin or a real Martin server (e.g. stars.optgeo.org). Only
+// the fields Cartographer actually reads are typed.
 export interface TileJson {
   tilejson: string;
   name?: string;
@@ -74,6 +87,7 @@ export interface TileJson {
   bounds?: [number, number, number, number];
   attribution?: string;
   description?: string;
+  vector_layers?: VectorLayerDescriptor[];
   // Extension key, not part of TileJSON 3.0 proper. See
   // hfu/layers-martin DECISIONS.md D18.
   legend_image_url?: string;

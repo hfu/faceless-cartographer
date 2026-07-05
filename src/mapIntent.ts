@@ -5,7 +5,7 @@ export type ParseResult =
   | { ok: true; intent: MapIntent }
   | { ok: false; error: string };
 
-// Validation rules from unopengis/staccato-spec spec/map-intent-vnext.md §6.
+// Validation rules from UNopenGIS/staccato-spec spec/map-intent-vnext.md §6.
 // Reject clearly rather than guessing -- a partially-valid intent should
 // never render silently as if it were complete.
 export function parseMapIntent(yamlText: string): ParseResult {

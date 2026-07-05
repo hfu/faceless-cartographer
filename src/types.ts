@@ -1,4 +1,4 @@
-// Map Intent schema, mirrored from unopengis/staccato-spec spec/map-intent-vnext.md.
+// Map Intent schema, mirrored from UNopenGIS/staccato-spec spec/map-intent-vnext.md.
 // Field names here are normative -- do not rename them locally.
 
 export interface CatalogEntry {

@@ -138,13 +138,13 @@
 
 **Status**: Accepted
 
-**Context**: `POST /` のレンダリング結果が、タイトル・地図・ボタン類を縦に積んだ通常のドキュメントレイアウトになっており、地図の可視領域が狭かった。実装パターンについて `unopengis/7#869` の議論を参照するよう指示があった。同issueは別プロジェクト(Vite+PMTiles+Protomaps+3D地形サイト)向けの詳細仕様だが、「地図を全面表示し、タイトル/ステータス/コントロール類は地図の上に浮かせたパネルとして重ねる」というレイアウトパターンは流用できると判断した。ただし同issueは `hash: "map"` によるURLベースの位置共有も含んでおり、これは faceless-cartographer の [ADR 0001](https://github.com/unopengis/staccato-spec/blob/main/spec/adr/0001-faceless-cartographer.md)(URLに地図の状態を持たせない)と正面から矛盾するため、意図的に採用しない。
+**Context**: `POST /` のレンダリング結果が、タイトル・地図・ボタン類を縦に積んだ通常のドキュメントレイアウトになっており、地図の可視領域が狭かった。実装パターンについて `UNopenGIS/7#869` の議論を参照するよう指示があった。同issueは別プロジェクト(Vite+PMTiles+Protomaps+3D地形サイト)向けの詳細仕様だが、「地図を全面表示し、タイトル/ステータス/コントロール類は地図の上に浮かせたパネルとして重ねる」というレイアウトパターンは流用できると判断した。ただし同issueは `hash: "map"` によるURLベースの位置共有も含んでおり、これは faceless-cartographer の [ADR 0001](https://github.com/UNopenGIS/staccato-spec/blob/main/spec/adr/0001-faceless-cartographer.md)(URLに地図の状態を持たせない)と正面から矛盾するため、意図的に採用しない。
 
 あわせて、「Copy Map Intent」を押した時点の地図の表示状態(中心座標・ズーム)が、コピーされる Map Intent に反映されていなかった(常に投稿時点の原文をそのままコピーしていた)。
 
 **Decision**:
 
-- `POST /` のレンダリングページを、`#map` を `position: fixed; inset: 0` によるフルスクリーン表示にし、タイトル・goal・通知・任意レイヤーのチェックボックス・アクションボタンを、半透明+`backdrop-filter: blur()` のパネルとして左上に重ねる形に変更した。`unopengis/7#869` のUIパターンは流用するが、`hash` によるURL状態共有は採用しない。
+- `POST /` のレンダリングページを、`#map` を `position: fixed; inset: 0` によるフルスクリーン表示にし、タイトル・goal・通知・任意レイヤーのチェックボックス・アクションボタンを、半透明+`backdrop-filter: blur()` のパネルとして左上に重ねる形に変更した。`UNopenGIS/7#869` のUIパターンは流用するが、`hash` によるURL状態共有は採用しない。
 - 「Copy Map Intent」クリック時、js-yaml をクライアント側でも読み込み(ESM importでCDNから、`unpkg.com/js-yaml@.../dist/js-yaml.mjs`)、元の Map Intent をパースした上で、その時点の `map.getCenter()`/`getZoom()`/`getBearing()`/`getPitch()` を `render_hints` として上書き・追記してからシリアライズし、クリップボードにコピーするようにした。これは `map-intent-vnext.md` §5 が `render_hints` の用途として明記している「実用上の再オープンのため」に沿う挙動である。YAMLの読み書きに失敗した場合は、元のテキストをそのままコピーする安全側の挙動にフォールバックする。
 
 **Consequences**: js-yaml 5.x はブラウザ向けのUMDバンドル(v3/v4にあった `dist/js-yaml.min.js` 相当)を廃止しており、ESM (`dist/js-yaml.mjs`) のみが配布されている。そのため、地図描画ページのスクリプトは `<script type="module">` に変更した(MapLibre GL JS自体は引き続きグローバル変数を公開する従来型の `<script>` タグで読み込み、モジュールスクリプトからは `maplibregl` グローバルとしてそのままアクセスしている)。Playwrightによる実ブラウザ確認で、パン・ズーム後にCopy Map Intentを押すと、実際の座標・ズームが `render_hints` に正しく反映されることを確認済み。フォームページ(`GET /`)のレイアウトは今回変更していない。
@@ -153,7 +153,7 @@
 
 **Status**: Accepted
 
-**Context**: `faceless-cartographer`/`hfu/layers-martin`/`unopengis/staccato-spec` の3リポジトリ間の整合性を確認したところ、以下が見つかった。
+**Context**: `faceless-cartographer`/`hfu/layers-martin`/`UNopenGIS/staccato-spec` の3リポジトリ間の整合性を確認したところ、以下が見つかった。
 
 1. `map-intent-vnext.md` §6-5 が定める「`sharing_policy.url_share` は faceless 構成では SHOULD false」というルールを一切チェックしていなかった。
 2. `src/catalog.ts` の TileJSON 検証が「`tilejson` フィールドが `"3."` で始まるか」を要求しており、これはCartographerの設計方針(「入力には寛容、出力には厳格」)に反する厳しすぎる実装だった。バージョン文字列が想定と違うだけで、実際には `tiles` 配列があり十分に描画可能なドキュメントまで `missing` 扱いにしてしまう。
@@ -195,7 +195,7 @@
 
 **Decision**: `missing_layers`/`unrenderable_layers` の情報を、専用APIではなく「Copy Map Intent」でコピーされる Map Intent 自体に `cartographer_feedback`(非規範的な拡張フィールド)として埋め込む。問題が無い場合はこのフィールド自体を付与しない。これにより、User が Map Intent をコピーして Staff に戻した場合、高性能な Staff エージェントであればこの `cartographer_feedback` を読み取って次の応答に反映できる、という**任意の(optional)フィードバックの環流経路**が生まれる。Cartographer 側から Staff への直接通信は発生させず、あくまで人間が運ぶ Map Intent というテキストに相乗りさせるだけなので、faceless の設計(URLで状態を持たない、人間介在の受け渡し)とも整合する。
 
-**Consequences**: `cartographer_feedback` は `map-intent-vnext.md` にはまだ存在しない、このプロジェクト独自の非規範的拡張である。D2で確立した「未知キーは無視されてよい」という前提の通り、これを理解しない Staff/Cartographer 実装からは単に無視される。将来 `unopengis/staccato-spec` 側で `background.md` §10 の構造化エラー形式が正式化された場合、フィールド名・形状をそちらに合わせて改名する可能性がある。
+**Consequences**: `cartographer_feedback` は `map-intent-vnext.md` にはまだ存在しない、このプロジェクト独自の非規範的拡張である。D2で確立した「未知キーは無視されてよい」という前提の通り、これを理解しない Staff/Cartographer 実装からは単に無視される。将来 `UNopenGIS/staccato-spec` 側で `background.md` §10 の構造化エラー形式が正式化された場合、フィールド名・形状をそちらに合わせて改名する可能性がある。
 
 ## D16: 必須レイヤー全滅時は空の地図をそのまま出す
 
@@ -242,7 +242,7 @@
 
 **Decision**: 単一の `index.html` + `src/main.ts` によるSPA(Single Page Application)とする。`renderFormView`/`renderMapView`(`src/render.ts`)が `#app` 要素の中身を書き換えることで画面を切り替える。フォームの送信は `<form>` の `submit` イベントを `preventDefault()` して `main.ts` 側のハンドラに渡すだけで、実際のHTTPリクエストは発生しない。「戻る」ボタンも同様にDOM書き換えで前の画面に戻る。ブラウザのURL・履歴は一切変化しない(遷移という概念自体が無い)。
 
-`unopengis/staccato-spec` の `ADR 0001` は「`GET /` MUST return an HTML page」「`POST /` MUST accept Map Intent and render map output」という文字通りの規定を持つが、SPAでは「`POST /` へのHTTPリクエスト」自体が発生しない。これはADR 0001の**精神**(URLに状態を持たせない、Map Intentのテキストが共有の一次artifact、人間が仲介する受け渡し)には完全に沿うが、**文言**とは厳密には一致しない、意図的な逸脱である。spec repoを直接改訂する権限はこちらには無いため、ここに明示的に記録する。むしろSPAはURLが一切変化しないぶん、「faceless」の趣旨をより徹底して満たす形になっているとも言える。
+`UNopenGIS/staccato-spec` の `ADR 0001` は「`GET /` MUST return an HTML page」「`POST /` MUST accept Map Intent and render map output」という文字通りの規定を持つが、SPAでは「`POST /` へのHTTPリクエスト」自体が発生しない。これはADR 0001の**精神**(URLに状態を持たせない、Map Intentのテキストが共有の一次artifact、人間が仲介する受け渡し)には完全に沿うが、**文言**とは厳密には一致しない、意図的な逸脱である。spec repoを直接改訂する権限はこちらには無いため、ここに明示的に記録する。むしろSPAはURLが一切変化しないぶん、「faceless」の趣旨をより徹底して満たす形になっているとも言える。
 
 **Consequences**: D1・D17 を置き換える。`express` 依存を削除。`src/server.ts` を削除。`src/mapIntent.ts`/`src/catalog.ts`/`src/style.ts` は元々環境非依存な純粋関数として書いてあったため、無改修で移植できた(この設計判断が今回活きた形になる)。`src/render.ts` は「HTML文字列を返す関数」から「DOMに書き込み、イベントリスナーを結線する関数」に書き換えた。ビルドツールは `hfu/attachbar` の `examples/mgrs-pmtiles` に倣い Vite を採用した(D21参照)。
 

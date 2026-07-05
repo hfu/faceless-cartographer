@@ -115,7 +115,7 @@ export function renderFormView(
 // POST /-equivalent view: renders the map for a validated, resolved Map
 // Intent. Full-bleed map with a floating panel (title/notices/controls)
 // overlaid on top-left, following the full-screen-map-plus-overlay-panel
-// pattern discussed in unopengis/7#869. That issue also uses `hash: "map"`
+// pattern discussed in UNopenGIS/7#869. That issue also uses `hash: "map"`
 // URL-based position sharing -- deliberately NOT adopted here, since
 // encoding map state in the URL is exactly what ADR 0001 (faceless
 // Cartographer) prohibits. Only the visual layout pattern is reused, not

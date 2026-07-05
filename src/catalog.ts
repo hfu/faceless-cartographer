@@ -1,7 +1,7 @@
 import type { CatalogEntry, LayerRef, MapIntent, ResolvedLayer, ResolveResult, TileJson } from './types.ts';
 
 // TileJSON 3.0 (collection model) is the canonical consumption model per
-// unopengis/staccato-spec spec/catalog-integration.md §10. A Martin-style
+// UNopenGIS/staccato-spec spec/catalog-integration.md §10. A Martin-style
 // catalog exposes GET /{source_id} for that document; the catalog root itself
 // (…/catalog) is only used to discover the base URL, not fetched here.
 const SUPPORTED_CATALOG_TYPES = new Set(['martin', 'layers_txt']);

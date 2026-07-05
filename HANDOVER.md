@@ -22,7 +22,7 @@ Library       カタログメタデータを公開する。参照実装は hfu/l
 
 Cartographer は意図的に「faceless」である: URLに地図の状態(ズーム・中心座標・選択レイヤー等)を一切持たせない。これは提案ではなく規範的な決定であり(`UNopenGIS/staccato-spec` の [ADR 0001](https://github.com/UNopenGIS/staccato-spec/blob/main/spec/adr/0001-faceless-cartographer.md))、覆すには新たな ADR が必要とされている。共有の一次artifactは Map Intent のテキスト自体であり、URLではない。
 
-本実装は ADR 0001 の「`GET /` はフォームを返し `POST /` が受理・描画する」という文言を、単一ページのSPA(クライアント側の状態遷移。実際のHTTPリクエストは発生しない)として満たしている。文言通りの実装ではないが、URLが一切変化しないという点でむしろ趣旨をより徹底して満たしている、という判断([DECISIONS.md](DECISIONS.md) D18)。この解釈の違いはspec repoへ提起できていない、意図的な逸脱として明示的に記録している。
+本実装は ADR 0001 の「`GET /` はフォームを返し `POST /` が受理・描画する」という文言を、単一ページのSPA(クライアント側の状態遷移。実際のHTTPリクエストは発生しない)として満たしている。文言通りの実装ではないが、URLが一切変化しないという点でむしろ趣旨をより徹底して満たしている、という判断([DECISIONS.md](DECISIONS.md) D18)。この解釈の違いは当初spec repoへ提起できていない、意図的な逸脱として記録していたが、2026-07-06にADR 0003としてspec側へ明確化を提案するPRを出した([UNopenGIS/staccato-spec#1](https://github.com/UNopenGIS/staccato-spec/pull/1)、レビュー待ち)。
 
 ### なぜ Cartographer は「軽く」あるべきか
 

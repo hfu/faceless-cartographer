@@ -242,7 +242,9 @@
 
 **Decision**: 単一の `index.html` + `src/main.ts` によるSPA(Single Page Application)とする。`renderFormView`/`renderMapView`(`src/render.ts`)が `#app` 要素の中身を書き換えることで画面を切り替える。フォームの送信は `<form>` の `submit` イベントを `preventDefault()` して `main.ts` 側のハンドラに渡すだけで、実際のHTTPリクエストは発生しない。「戻る」ボタンも同様にDOM書き換えで前の画面に戻る。ブラウザのURL・履歴は一切変化しない(遷移という概念自体が無い)。
 
-`UNopenGIS/staccato-spec` の `ADR 0001` は「`GET /` MUST return an HTML page」「`POST /` MUST accept Map Intent and render map output」という文字通りの規定を持つが、SPAでは「`POST /` へのHTTPリクエスト」自体が発生しない。これはADR 0001の**精神**(URLに状態を持たせない、Map Intentのテキストが共有の一次artifact、人間が仲介する受け渡し)には完全に沿うが、**文言**とは厳密には一致しない、意図的な逸脱である。spec repoを直接改訂する権限はこちらには無いため、ここに明示的に記録する。むしろSPAはURLが一切変化しないぶん、「faceless」の趣旨をより徹底して満たす形になっているとも言える。
+`UNopenGIS/staccato-spec` の `ADR 0001` は「`GET /` MUST return an HTML page」「`POST /` MUST accept Map Intent and render map output」という文字通りの規定を持つが、SPAでは「`POST /` へのHTTPリクエスト」自体が発生しない。これはADR 0001の**精神**(URLに状態を持たせない、Map Intentのテキストが共有の一次artifact、人間が仲介する受け渡し)には完全に沿うが、**文言**とは厳密には一致しない、意図的な逸脱である。むしろSPAはURLが一切変化しないぶん、「faceless」の趣旨をより徹底して満たす形になっているとも言える。
+
+**2026-07-06 追記**: この逸脱を明示的に記録するだけでなく、spec側の文言をSPA実装に合わせて明確化する提案(ADR 0003)を `UNopenGIS/staccato-spec` へPRとして提出した([UNopenGIS/staccato-spec#1](https://github.com/UNopenGIS/staccato-spec/pull/1))。このリポジトリ(`hfu/faceless-cartographer`)自体を「実際に動く証拠」として引用している。
 
 **Consequences**: D1・D17 を置き換える。`express` 依存を削除。`src/server.ts` を削除。`src/mapIntent.ts`/`src/catalog.ts`/`src/style.ts` は元々環境非依存な純粋関数として書いてあったため、無改修で移植できた(この設計判断が今回活きた形になる)。`src/render.ts` は「HTML文字列を返す関数」から「DOMに書き込み、イベントリスナーを結線する関数」に書き換えた。ビルドツールは `hfu/attachbar` の `examples/mgrs-pmtiles` に倣い Vite を採用した(D21参照)。
 

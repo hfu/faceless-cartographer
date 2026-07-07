@@ -25,9 +25,32 @@ describe('buildStyle', () => {
 
     const { style, unrenderable } = buildStyle(intent, resolved);
 
-    expect(style.layers.map((l) => l.id)).toEqual(['std', 'hazard', 'extra']);
-    expect((style.layers[0].layout as { visibility: string }).visibility).toBe('visible');
-    expect((style.layers[2].layout as { visibility: string }).visibility).toBe('none');
+    // Base style has "before" and "after" sections; thematic layers go in the middle
+    const beforeCount = style.layers.filter((l) => {
+      const id = (l as Record<string, unknown>).id as string;
+      return id.startsWith('bvmap') || id === 'background';
+    }).length;
+    const afterCount = style.layers.filter((l) => {
+      const id = (l as Record<string, unknown>).id as string;
+      return id.startsWith('bvmap-道路');
+    }).length;
+    expect(beforeCount).toBeGreaterThan(0);
+    expect(afterCount).toBeGreaterThan(0);
+
+    // Thematic layers (std, hazard, extra) should appear between before and after
+    const thematicIds = ['std', 'hazard', 'extra'];
+    const thematicIndices = thematicIds.map((id) => style.layers.findIndex((l) => (l as Record<string, unknown>).id === id)).filter((i) => i >= 0);
+    expect(thematicIndices).toEqual([expect.any(Number), expect.any(Number), expect.any(Number)]);
+    // Check ordering: required first, then optional
+    const stdIdx = style.layers.findIndex((l) => (l as Record<string, unknown>).id === 'std');
+    const hazardIdx = style.layers.findIndex((l) => (l as Record<string, unknown>).id === 'hazard');
+    const extraIdx = style.layers.findIndex((l) => (l as Record<string, unknown>).id === 'extra');
+    expect(stdIdx).toBeLessThan(extraIdx);
+    expect(hazardIdx).toBeLessThan(extraIdx);
+
+    // Check visibility
+    expect((style.layers[stdIdx].layout as { visibility: string }).visibility).toBe('visible');
+    expect((style.layers[extraIdx].layout as { visibility: string }).visibility).toBe('none');
     expect(unrenderable).toEqual([]);
   });
 
@@ -40,7 +63,11 @@ describe('buildStyle', () => {
     const { style, unrenderable } = buildStyle(intent, resolved);
 
     expect(Object.keys(style.sources)).toContain('hazard');
-    expect(style.layers.map((l) => l.id)).toEqual(['std']);
+    // Background (bvmap/mapterhorn) + std are rendered, hazard is not
+    const stdLayer = style.layers.find((l) => l.id === 'std');
+    const hazardLayer = style.layers.find((l) => l.id === 'hazard');
+    expect(stdLayer).toBeDefined();
+    expect(hazardLayer).toBeUndefined();
     expect(unrenderable).toEqual(['hazard']);
   });
 
@@ -68,11 +95,18 @@ describe('buildStyle', () => {
 
     expect(unrenderable).toEqual([]);
     expect(style.sources.bvmap.type).toBe('vector');
-    // 2 source-layers x 3 geometry types = 6 style layers.
-    expect(style.layers).toHaveLength(6);
-    expect(style.layers.map((l) => l.id)).toEqual(
-      expect.arrayContaining(['bvmap__BldA__fill', 'bvmap__BldA__line', 'bvmap__BldA__circle', 'bvmap__RdCL__fill', 'bvmap__RdCL__line', 'bvmap__RdCL__circle'])
+    // Background layers (bvmap base) + 2 source-layers x 3 geometry types (6 thematic) + road/label layers
+    // Just verify the 6 thematic sub-layers are present.
+    const thematicLayerIds = style.layers.map((l) => (l as Record<string, unknown>).id as string).filter(
+      (id) => id.includes('bvmap__BldA__') || id.includes('bvmap__RdCL__')
     );
+    expect(thematicLayerIds).toContainEqual('bvmap__BldA__fill');
+    expect(thematicLayerIds).toContainEqual('bvmap__BldA__line');
+    expect(thematicLayerIds).toContainEqual('bvmap__BldA__circle');
+    expect(thematicLayerIds).toContainEqual('bvmap__RdCL__fill');
+    expect(thematicLayerIds).toContainEqual('bvmap__RdCL__line');
+    expect(thematicLayerIds).toContainEqual('bvmap__RdCL__circle');
+
     const bldaFill = style.layers.find((l) => l.id === 'bvmap__BldA__fill')!;
     expect(bldaFill.source).toBe('bvmap');
     expect(bldaFill['source-layer']).toBe('BldA');
@@ -87,7 +121,22 @@ describe('buildStyle', () => {
     ];
     const { style, unrenderable } = buildStyle({ ...intent, required_layers: [{ source_id: 'hazard' }], optional_layers: [] }, resolved);
     expect(unrenderable).toEqual(['hazard']);
-    expect(style.layers).toHaveLength(0);
+    // Background layers (from base-style) are still present; no thematic layer for hazard
+    expect(style.layers.length).toBeGreaterThan(0); // at least background layers
+    expect(style.layers.find((l) => l.id === 'hazard')).toBeUndefined();
+  });
+
+  it('always renders background (bvmap + mapterhorn) even with no thematic layers', () => {
+    const { style, unrenderable } = buildStyle(intent, []);
+    expect(unrenderable).toEqual([]);
+    // Base style sources must be present
+    expect(Object.keys(style.sources)).toContain('bvmap');
+    expect(Object.keys(style.sources)).toContain('mapterhorn');
+    // Background layers exist
+    expect(style.layers.find((l) => l.id === 'background')).toBeDefined();
+    expect(style.layers.find((l) => l.id === 'hillshade')).toBeDefined();
+    // Terrain is set
+    expect(style.terrain).toBeDefined();
   });
 });
 

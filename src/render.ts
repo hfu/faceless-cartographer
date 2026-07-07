@@ -4,7 +4,7 @@ import type { MapIntent, ResolvedLayer } from './types.ts';
 import type { InitialView, MapLibreStyle } from './style.ts';
 
 const EXAMPLE_MAP_INTENT = `spec_version: "map-intent/v2"
-goal: "対象地域における土砂災害警戒区域（土石流・地すべり・急傾斜地の崩壊）の分布を、背景の標準地図とともに示す"
+goal: "対象地域における土砂災害警戒区域（土石流・地すべり・急傾斜地の崩壊）の分布を表示する"
 area:
   name: null
   bbox: null
@@ -14,8 +14,6 @@ catalog_context:
       type: "layers_txt"
       uri: "https://hfu.github.io/layers-martin/catalog"
 required_layers:
-  - source_id: "std"
-    label: "背景（標準地図）"
   - source_id: "05_dosekiryukeikaikuiki"
     label: "土石流の警戒区域・特別警戒区域"
   - source_id: "05_jisuberikeikaikuiki"
@@ -188,13 +186,15 @@ export function renderMapView(
     zoom: view.zoom,
     bearing: view.bearing,
     pitch: view.pitch,
-    attributionControl: false
+    attributionControl: false,
+    localIdeographFontFamily: 'sans-serif'
   });
   if (view.bounds) {
     map.fitBounds(view.bounds, { padding: 40, duration: 0 });
   }
   map.addControl(new maplibregl.NavigationControl());
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+  map.addControl(new maplibregl.TerrainControl({ source: 'mapterhorn', exaggeration: 1 }), 'top-right');
 
   // Legend images, keyed by source_id, for whichever layers currently have
   // one (hfu/layers-martin DECISIONS.md D18: legend_image_url extension).

@@ -1,4 +1,5 @@
 import type { MapIntent, ResolvedLayer, VectorLayerDescriptor } from './types.ts';
+import baseStyle from './base-style.json' with { type: 'json' };
 
 // A minimal MapLibre style object. Typed loosely here (rather than pulling in
 // the maplibre-gl package as a server dependency) since MapLibre GL JS itself
@@ -9,6 +10,8 @@ export interface MapLibreStyle {
   sources: Record<string, Record<string, unknown>>;
   layers: Array<Record<string, unknown>>;
   glyphs?: string;
+  sprite?: string;
+  terrain?: Record<string, unknown>;
 }
 
 function isVectorTileUrl(url: string): boolean {
@@ -71,9 +74,15 @@ function buildVectorSubLayers(sourceId: string, vectorLayers: VectorLayerDescrip
 // required_layers sits underneath), then optional layers on top. Optional
 // layers are added to the style but start hidden (visibility: "none"); the
 // rendered page provides checkboxes to reveal them -- see DECISIONS.md D4.
+//
+// Background layers (bvmap + Mapterhorn terrain) are provided by base-style.json
+// and are always rendered regardless of Map Intent content -- see DECISIONS.md D24.
+// Thematic layers (from Map Intent required_layers/optional_layers) are inserted
+// between baseStyle.before (background + hillshade) and baseStyle.after (roads/labels),
+// matching the insertion point where kitavolca places VBM/VLCM data.
 export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { style: MapLibreStyle; unrenderable: string[] } {
-  const sources: MapLibreStyle['sources'] = {};
-  const layers: MapLibreStyle['layers'] = [];
+  const sources: MapLibreStyle['sources'] = { ...baseStyle.sources };
+  const thematicLayers: MapLibreStyle['layers'] = [];
   const unrenderable: string[] = [];
 
   const requiredOrder = intent.required_layers.map((l) => l.source_id);
@@ -110,7 +119,7 @@ export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { styl
       // when the schema is actually known -- guessing a source-layer name
       // would be worse than not rendering at all.
       if (hasVectorLayers) {
-        layers.push(...buildVectorSubLayers(sourceId, layer.tilejson.vector_layers!, visible));
+        thematicLayers.push(...buildVectorSubLayers(sourceId, layer.tilejson.vector_layers!, visible));
       } else {
         unrenderable.push(sourceId);
       }
@@ -126,7 +135,7 @@ export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { styl
       bounds: layer.tilejson.bounds,
       attribution: layer.tilejson.attribution
     };
-    layers.push({
+    thematicLayers.push({
       id: sourceId,
       type: 'raster',
       source: sourceId,
@@ -134,7 +143,23 @@ export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { styl
     });
   }
 
-  return { style: { version: 8, sources, layers }, unrenderable };
+  const layers = [
+    ...baseStyle.before,
+    ...thematicLayers,
+    ...baseStyle.after
+  ];
+
+  return {
+    style: {
+      version: 8,
+      sources,
+      layers,
+      glyphs: baseStyle.glyphs,
+      sprite: baseStyle.sprite,
+      terrain: baseStyle.terrain
+    },
+    unrenderable
+  };
 }
 
 export interface InitialView {

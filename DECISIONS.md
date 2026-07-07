@@ -29,6 +29,7 @@
 | [D21](#d21-静的サイトとしてdocsに出力しgithub-pagesでホストする) | 静的サイトとして `docs/` に出力し、GitHub Pagesでホストする | Accepted | 2026-07-04 |
 | [D22](#d22-staffプロンプトにコピーボタンを追加しsummary内のリンクを外に出す) | Staffプロンプトにコピーボタンを追加し、`<summary>`内のリンクを外に出す | Accepted | 2026-07-04 |
 | [D23](#d23-vector_layersスキーマが既知のベクトルタイルは幾何タイプ別に汎用描画する複数カタログ統合はaggregatorを作らずmap-intentの複数active_catalogsで実現する) | `vector_layers`スキーマが既知のベクトルタイルは幾何タイプ別に汎用描画する。複数カタログ統合はaggregatorを作らずMap Intentの複数`active_catalogs`で実現する | Accepted | 2026-07-04 |
+| [D24](#d24-背景地図を-bvmap-グレースケール--mapterhorn-hillshade--terrain-に固定して常時描画する) | 背景地図を bvmap グレースケール + Mapterhorn hillshade + terrain に固定して常時描画する | Accepted | 2026-07-08 |
 
 ---
 
@@ -301,6 +302,18 @@ Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクト
 **Decision**: 2つの変更を行った。(1) `catalog.ts`・`resolveLayers`は変更不要 -- 複数`active_catalogs`はすでに扱えていた。統合(aggregation)のための別リポジトリは作らない。(2) `style.ts`に、TileJSONの`vector_layers`配列(実サーバーが実際のMVT内容を検査して返す、source-layerごとのスキーマ情報)が存在する場合の描画パスを追加した。特定のカタログのレイヤー命名規則に依存しないよう、レイヤー名ごとに意味を推測するのではなく、`source-layer`ごとに`["geometry-type"]`式でフィルタしたfill/line/circleの3スタイルレイヤーを機械的に生成する(`buildVectorSubLayers`)。`vector_layers`が存在しない(=hfu/layers-martinのようにlayers.txtからは復元できない)ベクトルタイルは、従来通り`unrenderable`として報告するのみに留める。また、ベクトルタイルかどうかの判定を、URLの拡張子(`.pbf`/`.mvt`)だけでなく`vector_layers`の有無でも行うようにした -- stars.optgeo.orgの実際のタイルURL(`https://stars.optgeo.org/bvmap/{z}/{x}/{y}`)には拡張子がないため。
 
 **Consequences**: `catalog.test.ts`に、layers-martin(`std`)とstars.optgeo.org(`bvmap`)を1つのintentから同時解決する統合テストを追加(実ネットワーク、両catalog_idが正しく紐づくことを確認)。`style.test.ts`に、`vector_layers`が既知のケース(source-layerごとに3スタイルレイヤー生成)と、空配列は従来通り`unrenderable`のままであることを確認するテストを追加。Playwrightで実際にstars.optgeo.orgの`bvmap`を読み込み、東京都心の道路・水域・建物のポリゴンが実際に描画されることをスクリーンショットで確認した。Cartographerは今後、`vector_layers`を公開するどのMartinサーバーに対しても(stars.optgeo.orgに限らず)同じ仕組みで汎用描画できる。ジオメトリタイプ別の配色は暫定的なもので、レイヤー名(例: `BldA`=建物、`RdCL`=道路中心線)に応じた意味的なスタイリングは将来のバックログ。
+
+## D24: 背景地図を bvmap グレースケール + Mapterhorn hillshade + terrain に固定して常時描画する
+
+**Status**: Accepted
+
+**Context**: Cartographerが Map Intent の `required_layers` と `optional_layers` から Map Intent-driven な Map を生成するアーキテクチャは D3-D23 で確立済みだが、デフォルトの背景地図は `hfu/layers-martin` カタログが提供する `"std"` (GSI標準地図の画像タイル)のままであり、ウェブ地図として見た目が古めかしい。一方、`hfu/kitavolca`(北海道火山図 VBM/VLCM を PMTiles 化するプロジェクト)は同じ課題に先に取り組んでおり、`docs/style.json`(commit `0c23a4a`)に以下を実装・デプロイ・検証済み: (1) GSI最適化ベクトルタイル(`bvmap`、`stars.optgeo.org` 配信)の公式スタイルを輝度ベースで全色グレースケール変換(198レイヤー)、(2) Mapterhorn(`tiles.mapterhorn.com`)の terrarium encoding 3D地形を raster-dem ソースとして hillshade + terrain の両方に使用(`maxzoom: 14` で高ズームでの404対応)、(3) レイヤー順序を Band A(基礎的な地図要素) + Band B/C(道路/建物/ラベル) に分割し、その間に主題データを挿入可能な構造設計。
+
+この kitavolca の設計と実装を faceless-cartographer の既定背景として取り込むことで、見た目を現代化する。また、kitavolca の「Band A と Band B の間」という挿入点が、**正にこのリポジトリが Map Intent の `required_layers`/`optional_layers` を差し込むべき位置**であることを理解し、実装する。
+
+**Decision**: (1) `hfu/kitavolca` の `docs/style.json`(commit `0c23a4a`)から bvmap + mapterhorn ソース/レイヤーを抽出し、vlcm/vbm/seamlessphoto を除外した形で `src/base-style.json` として一度だけ移植・vendoring する(ビルド時 live fetch ではなく、kitavolca 側の将来変更の自動追随を避け、外部ビルド時依存を増やさないため)。(2) `src/style.ts` の `buildStyle()` を改修: 背景レイヤー(`baseStyle.before`/`baseStyle.after`) と主題レイヤー(Map Intent 解決済み)を `[...baseStyle.before, ...thematic, ...baseStyle.after]` で構成。これにより、Staff が `source_id: "std"` を要求しなくなっても bvmap 背景は常時描画。(3) `src/render.ts` で `localIdeographFontFamily: 'sans-serif'` (optimal_bvmap のCJK グリフPBF取得を避け、ブラウザシステムフォント使用)と `TerrainControl` を追加。(4) `EXAMPLE_MAP_INTENT` から `"std"` レイヤーを削除(冗長化)。(5) `tsconfig.json` に `"resolveJsonModule": true` を追加。
+
+**Consequences**: 背景地図が Map Intent に依存しない既定動作になる。旧来の意図で `source_id: "std"` を要求する Map Intent も無改修のまま解決・描画され続けるが、その `"std"` レイヤーは実際には bvmap より上に重なり、背景として見えなくなる(冗長かつ無害)。この動作は Postel's law(入力には寛容に)に従い、特別扱いのコードは追加しない。kitavolca 側で bvmap スタイル・レイヤー順が将来変更されても自動追随しない(vendored snapshot のため)が、その場合は `src/base-style.json` を手動で再度抽出・更新することで対応する。`gsi-cyberjapan.github.io/optimal_bvmap` へのビルド時外部依存(glyphs/sprite URL)が新規に発生。D6 で定めた Japan-wide の既定ビューは bvmap も GSI由来のため、整合性は維持される。
 
 ## バックログ(未決定・保留)
 

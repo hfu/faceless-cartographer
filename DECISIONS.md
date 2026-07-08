@@ -34,6 +34,7 @@
 | [D26](#d26-等高線を主題レイヤーの上に描画する) | 等高線を主題レイヤーの上に描画する | Accepted | 2026-07-08 |
 | [D27](#d27-docs-を-vite-plugin-singlefile-で単一ファイル化する) | `docs/` を vite-plugin-singlefile で単一ファイル化する | Accepted | 2026-07-08 |
 | [D28](#d28-デフォルト-map-intent-を札幌の地形分類に更新しハイブリッド対応-staff_prompt-を実装テスト) | デフォルト Map Intent を札幌の地形分類に更新し、ハイブリッド対応 STAFF_PROMPT を実装テスト | Accepted | 2026-07-09 |
+| [D29](#d29-vector-fill-layer-で-hillshade-を透視するため-blend-mode-を導入) | Vector fill layer で hillshade を透視するため blend-mode を導入 | Accepted | 2026-07-09 |
 
 ---
 
@@ -366,6 +367,33 @@ Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクト
 - デフォルト Map Intent が地形・土地条件というより地理学的な内容に(従来の災害リスク中心から拡張)。プリフィル表示が多角的な地図用途をカバーするようになった
 - faceless-cartographer UI を開いたユーザーには、札幌市の地形分類が既定で表示される。実装テストとしての特性を残しつつ、実用的な例として機能
 - 可逆的な決定: 将来別のテストケースが必要なら、この EXAMPLE_MAP_INTENT は再度変更可能。layers-martin D23 の成熟度を確認した後、より汎用的なサンプルに戻してもよい
+
+## D29: Vector fill layer で hillshade を透視するため blend-mode を導入
+
+**Status**: Accepted (試験的実装)
+
+**Context**: ユーザー報告: 「塗りポリゴンがあるところで hillshade の影が消えてしまう。土砂災害危険区域の表示の場合、これはとても惜しい」。現在の style 構成では `[...before(hillshade含む), ...thematic_polygon_fills, ...]` であり、不透明な fill (opacity: 0.25) が hillshade を覆い隠す。
+
+技術的背景:
+- MapLibre GL JS は layer の composite blending をサポート
+- Paint-level な blend-mode で「乗算合成(multiply)」を適用可能
+- Multiply blend: 基底レイヤーを保持しつつ、上位レイヤーの色を合成
+
+**Decision**:
+- Generic vector layer の fill sub-layer (`src/style.ts` L39-47) に `'paint-blend-mode': 'multiply'` を追加
+- これにより、主題レイヤーの fill が hillshade を透視
+- テスト対象: 土砂災害警戒区域の Map Intent (05_dosekiryukeikaikuiki等)
+- Typecheck/build/test 全て OK、実装準備完了
+
+**Consequences**:
+- Fill layer で hillshade が視認可能に → 地形と警戒区域の視覚的関係が明確化
+- Blend-mode は MapLibre standard feature → ブラウザ互換性懸念なし
+- Style のみの変更 → カタログ・Map Intent スキーマに影響なし
+- 未検証: 実際のブラウザ rendering での視覚効果（本番環境での確認が必要、これは次フェーズの QA で実施予定）
+
+**将来の改善候補**:
+- Line layer にも同様に blend-mode 適用（line-blur/line-opacity との組み合わせ検証）
+- Zoom-dependent opacity: ズーム level に応じて opacity を動的に変更する sophistication
 
 ## バックログ(未決定・保留)
 

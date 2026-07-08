@@ -27,6 +27,10 @@ function isVectorTileUrl(url: string): boolean {
 // filter that matches no features in that source-layer, so this stays
 // correct for any vector catalog that publishes vector_layers, not just the
 // one this was written against.
+//
+// NOTE: Fill layers now include 'paint-blend-mode': 'multiply' to allow
+// background hillshade to show through polygon fills (D29). This preserves
+// visual relationships between thematic hazard zones and terrain.
 function buildVectorSubLayers(sourceId: string, vectorLayers: VectorLayerDescriptor[], visible: string): MapLibreStyle['layers'] {
   const out: MapLibreStyle['layers'] = [];
   for (const vl of vectorLayers) {
@@ -41,7 +45,8 @@ function buildVectorSubLayers(sourceId: string, vectorLayers: VectorLayerDescrip
         source: sourceId,
         'source-layer': vl.id,
         filter: ['==', ['geometry-type'], 'Polygon'],
-        paint: { 'fill-color': '#5b7c99', 'fill-opacity': 0.25 },
+        paint: { 'fill-color': '#5b7c99', 'fill-opacity': 0.25, 'fill-opacity-transition': { duration: 200 } },
+        'paint-blend-mode': 'multiply',
         layout: { visibility: visible },
         ...zoomBounds
       },

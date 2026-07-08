@@ -219,62 +219,15 @@ export function renderMapView(
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
   map.addControl(new maplibregl.TerrainControl({ source: 'mapterhorn', exaggeration: 1 }), 'top-right');
 
-  // Layer Control: group layers by source_id, hiding generic sub-layer details (fill/line/circle)
-  // This keeps the UI manageable despite the 25-30 internal style layers (D30).
-  const buildLayerControlDefinitions = () => {
-    // Group style layers by source_id, collecting sub-layer IDs (fill/line/circle)
-    const layersBySourceId = new Map<string, string[]>();
-    for (const styleLayer of style.layers) {
-      const lid = styleLayer.id as string;
-      // Match pattern: "source_id__...__suffix" or just "source_id"
-      const match = lid.match(/^([a-z0-9_]+)(?:__[^_]+__(?:fill|line|circle))?$/i);
-      if (!match) continue;
-      const sourceId = match[1];
-      if (!layersBySourceId.has(sourceId)) {
-        layersBySourceId.set(sourceId, []);
-      }
-      layersBySourceId.get(sourceId)!.push(lid);
-    }
-
-    // Build layer control entries, grouped by required/optional
-    const requiredLayers = resolved.filter((r) => r.required).map((r) => ({
-      id: r.source_id,
-      name: r.label ?? r.source_id,
-      layerIds: layersBySourceId.get(r.source_id) ?? []
-    }));
-    const optionalLayers = resolved.filter((r) => !r.required).map((r) => ({
-      id: r.source_id,
-      name: r.label ?? r.source_id,
-      layerIds: layersBySourceId.get(r.source_id) ?? []
-    }));
-
-    // Construct layer control config (expected format varies by library version)
-    // Try to match maplibre-gl-layer-control expected structure
-    return {
-      layers: [
-        {
-          group: '主題レイヤー',
-          layers: requiredLayers.map((l) => ({ id: l.id, name: l.name }))
-        },
-        ...(optionalLayers.length > 0
-          ? [
-              {
-                group: '補助情報',
-                collapsed: true,
-                layers: optionalLayers.map((l) => ({ id: l.id, name: l.name }))
-              }
-            ]
-          : [])
-      ]
-    };
-  };
-
+  // Layer Control: collect all non-background thematic layers for the control
   try {
-    const layerControlDefs = buildLayerControlDefinitions();
+    // Collect source_ids of all resolved (required + optional) layers for LayerControl
+    const thematicLayerIds = resolved.map((r) => r.source_id);
+
     const layerControl = new LayerControl({
-      ...layerControlDefs,
-      collapsed: false
-    } as Record<string, unknown>);
+      collapsed: false,
+      layers: thematicLayerIds
+    });
     map.addControl(layerControl, 'bottom-left');
   } catch (e) {
     // Graceful degradation: if LayerControl fails to initialize, continue without it

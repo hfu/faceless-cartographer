@@ -5,10 +5,10 @@ import type { MapIntent, ResolvedLayer } from './types.ts';
 import type { InitialView, MapLibreStyle } from './style.ts';
 
 const EXAMPLE_MAP_INTENT = `spec_version: "map-intent/v2"
-goal: "札幌市域における地形分類の分布を、背景地形とともに示す。治水地形分類図により地盤高度や地形の成因を把握。"
+goal: "対象地域における土砂災害警戒区域（土石流・地すべり・急傾斜地の崩壊）の分布を、背景地形とともに示す。"
 area:
-  name: "札幌市"
-  bbox: [141.0, 42.88, 141.5, 43.25]
+  name: null
+  bbox: null
 catalog_context:
   active_catalogs:
     - id: "layers-martin"
@@ -16,22 +16,24 @@ catalog_context:
       uri: "https://hfu.github.io/layers-martin/catalog"
       version: "2026-07-09T00:00:00Z"
 required_layers:
-  - source_id: "lcmfc2"
-    label: "治水地形分類図（札幌市）"
-  - source_id: "relief"
-    label: "色別標高図（背景地形）"
+  - source_id: "05_dosekiryukeikaikuiki"
+    label: "土石流の警戒区域・特別警戒区域"
+  - source_id: "05_jisuberikeikaikuiki"
+    label: "地すべりの警戒区域・特別警戒区域"
+  - source_id: "05_kyukeishakeikaikuiki"
+    label: "急傾斜地の崩壊の警戒区域・特別警戒区域"
 optional_layers:
-  - source_id: "lcm25k_2012"
-    label: "数値地図25000(土地条件図、詳細参考用)"
+  - source_id: "landslide"
+    label: "地すべり地形分布図（防災科学技術研究所、現況の警戒区域とは別の地形学的観点の補助情報）"
 relationships_to_highlight:
-  - "地形分類と標高の関係（低地・台地・山地の分布）"
+  - "警戒区域分布と背景地形(hillshade)の視覚的関係"
 sharing_policy:
   url_share: false
   intent_share: true
 provenance:
   generated_by: "faceless-cartographer"
   generated_at: "2026-07-09T00:00:00Z"
-  intent_id: "example-sapporo-terrain"
+  intent_id: "example-disaster-zones"
 `;
 
 function escapeHtml(value: string): string {
@@ -271,7 +273,7 @@ export function renderMapView(
     const layerControlDefs = buildLayerControlDefinitions();
     const layerControl = new LayerControl({
       ...layerControlDefs,
-      compact: false
+      collapsed: false
     } as Record<string, unknown>);
     map.addControl(layerControl, 'bottom-left');
   } catch (e) {

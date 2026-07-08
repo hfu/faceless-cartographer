@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "js-yaml": "^5.2.1",
-    "maplibre-gl": "^5.24.0"
+    "maplibre-gl": "^5.24.0",
+    "maplibre-gl-layer-control": "^0.17.4"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",

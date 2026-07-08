@@ -1,5 +1,6 @@
 import maplibregl from 'maplibre-gl';
 import { load as yamlLoad, dump as yamlDump } from 'js-yaml';
+import { LayerControl } from 'maplibre-gl-layer-control';
 import type { MapIntent, ResolvedLayer } from './types.ts';
 import type { InitialView, MapLibreStyle } from './style.ts';
 
@@ -219,6 +220,65 @@ export function renderMapView(
   map.addControl(new maplibregl.NavigationControl());
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
   map.addControl(new maplibregl.TerrainControl({ source: 'mapterhorn', exaggeration: 1 }), 'top-right');
+
+  // Layer Control: group layers by source_id, hiding generic sub-layer details (fill/line/circle)
+  // This keeps the UI manageable despite the 25-30 internal style layers (D30).
+  const buildLayerControlDefinitions = () => {
+    // Group style layers by source_id, collecting sub-layer IDs (fill/line/circle)
+    const layersBySourceId = new Map<string, string[]>();
+    for (const styleLayer of style.layers) {
+      const lid = styleLayer.id as string;
+      // Match pattern: "source_id__...__suffix" or just "source_id"
+      const match = lid.match(/^([a-z0-9_]+)(?:__[^_]+__(?:fill|line|circle))?$/i);
+      if (!match) continue;
+      const sourceId = match[1];
+      if (!layersBySourceId.has(sourceId)) {
+        layersBySourceId.set(sourceId, []);
+      }
+      layersBySourceId.get(sourceId)!.push(lid);
+    }
+
+    // Build layer control entries, grouped by required/optional
+    const requiredLayers = resolved.filter((r) => r.required).map((r) => ({
+      id: r.source_id,
+      name: r.label ?? r.source_id,
+      layerIds: layersBySourceId.get(r.source_id) ?? []
+    }));
+    const optionalLayers = resolved.filter((r) => !r.required).map((r) => ({
+      id: r.source_id,
+      name: r.label ?? r.source_id,
+      layerIds: layersBySourceId.get(r.source_id) ?? []
+    }));
+
+    // Construct layer control config (expected format varies by library version)
+    // Try to match maplibre-gl-layer-control expected structure
+    return {
+      layers: [
+        {
+          group: '主題レイヤー',
+          layers: requiredLayers.map((l) => ({ id: l.id, name: l.name }))
+        },
+        ...(optionalLayers.length > 0
+          ? [
+              {
+                group: '補助情報',
+                collapsed: true,
+                layers: optionalLayers.map((l) => ({ id: l.id, name: l.name }))
+              }
+            ]
+          : [])
+      ]
+    };
+  };
+
+  try {
+    const layerControlDefs = buildLayerControlDefinitions();
+    const layerControl = new LayerControl(layerControlDefs as Record<string, unknown>);
+    map.addControl(layerControl, 'bottom-right');
+  } catch (e) {
+    // Graceful degradation: if LayerControl fails to initialize, continue without it
+    console.warn('LayerControl initialization failed; proceeding without layer panel', e);
+  }
 
   // Legend images, keyed by source_id, for whichever layers currently have
   // one (hfu/layers-martin DECISIONS.md D18: legend_image_url extension).

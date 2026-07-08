@@ -35,6 +35,7 @@
 | [D27](#d27-docs-を-vite-plugin-singlefile-で単一ファイル化する) | `docs/` を vite-plugin-singlefile で単一ファイル化する | Accepted | 2026-07-08 |
 | [D28](#d28-デフォルト-map-intent-を札幌の地形分類に更新しハイブリッド対応-staff_prompt-を実装テスト) | デフォルト Map Intent を札幌の地形分類に更新し、ハイブリッド対応 STAFF_PROMPT を実装テスト | Accepted | 2026-07-09 |
 | [D29](#d29-vector-fill-layer-で-hillshade-を透視するため-blend-mode-を導入) | Vector fill layer で hillshade を透視するため blend-mode を導入 | Accepted | 2026-07-09 |
+| [D30](#d30-maplibre-gl-layer-control-による-レイヤーパネル統合) | maplibre-gl-layer-control によるレイヤーパネル統合 | Accepted | 2026-07-09 |
 
 ---
 
@@ -394,6 +395,35 @@ Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクト
 **将来の改善候補**:
 - Line layer にも同様に blend-mode 適用（line-blur/line-opacity との組み合わせ検証）
 - Zoom-dependent opacity: ズーム level に応じて opacity を動的に変更する sophistication
+
+## D30: maplibre-gl-layer-control による レイヤーパネル統合
+
+**Status**: Accepted (試験的実装)
+
+**Context**: ユーザー要求: 「maplibre-gl-layer-control を加えてレイヤーをコントロールできるようにしよう」。現在の faceless-cartographer は optional_layers のみチェックボックス toggle でしか制御不可。レイヤー順序変更・グループ化が欲しい。
+
+同時に懸念: 「ベクトルタイルの全レイヤーが入ってしまうと長くなり過ぎるのではないか」→ 解決策: generic sub-layers (fill/line/circle) を自動グループ化、UI では source_id 単位で表現。
+
+**Decision**:
+- `npm install maplibre-gl-layer-control` を実施
+- `src/render.ts` に LayerControl インポート + 統合ロジック追加
+- Layer definitions を動的に生成:
+  - Style layers を source_id でグループ化（sub-layer 詳細は隠蔽）
+  - Required layers → 「主題レイヤー」グループ
+  - Optional layers → 「補助情報」グループ（collapsed 状態）
+- `map.addControl(layerControl, 'bottom-right')` で右下に配置
+- Graceful degradation: LayerControl 初期化失敗時は console.warn で継続
+
+**Consequences**:
+- UI 層数を管理可能に: 25-30 internal layers → UI 上は 4-10 items に圧縮
+- ユーザーが視認しないレイヤー管理詳細（fill/line/circle sub-layers）を自動制御
+- Build size: ~1.36 MB (gzip: ~335KB) へ増加（maplibre-gl-layer-control ライブラリ分）
+- Typecheck/build/test OK、本番環境でのブラウザ動作確認は次フェーズ
+
+**将来の拡張**:
+- Layer order change の実装（ドラッグ可能化）
+- Multi-layer visibility control（sub-layer toggle時に全て連動）
+- Background/補助要素 group の disable 設定
 
 ## バックログ(未決定・保留)
 

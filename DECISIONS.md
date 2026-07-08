@@ -31,6 +31,8 @@
 | [D23](#d23-vector_layersスキーマが既知のベクトルタイルは幾何タイプ別に汎用描画する複数カタログ統合はaggregatorを作らずmap-intentの複数active_catalogsで実現する) | `vector_layers`スキーマが既知のベクトルタイルは幾何タイプ別に汎用描画する。複数カタログ統合はaggregatorを作らずMap Intentの複数`active_catalogs`で実現する | Accepted | 2026-07-04 |
 | [D24](#d24-背景地図を-bvmap-グレースケール--mapterhorn-hillshade--terrain-に固定して常時描画する) | 背景地図を bvmap グレースケール + Mapterhorn hillshade + terrain に固定して常時描画する | Accepted | 2026-07-08 |
 | [D25](#d25-デジタル庁デザインシステムへの部分準拠トークンとアクセシビリティパターン採用) | デジタル庁デザインシステムへの部分準拠(トークンとアクセシビリティパターン採用) | Accepted | 2026-07-08 |
+| [D26](#d26-等高線を主題レイヤーの上に描画する) | 等高線を主題レイヤーの上に描画する | Accepted | 2026-07-08 |
+| [D27](#d27-docs-を-vite-plugin-singlefile-で単一ファイル化する) | `docs/` を vite-plugin-singlefile で単一ファイル化する | Accepted | 2026-07-08 |
 
 ---
 
@@ -325,6 +327,26 @@ Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクト
 **Decision**: 準拠レベル:トークン+アクセシビリティパターンを採用し、コンポーネント CSS は vendoring する。(1) `index.html` の `<head>` に `@digital-go-jp/design-tokens` を CDN 経由で追加(バージョン固定)。(2) `src/dads-components.css` を新規作成し、`digital-go-jp/design-system-example-components-html`(commit `3b34f4c`)から必要なクラスのみを移植: `global.css`(`:focus-visible` outline、リンク配色)、`button.css`(`.dads-button[data-type="solid-fill"|"outline"][data-size="md"]`)、`checkbox.css`(`.dads-checkbox[data-size="sm"]`)、`disclosure.css`(`.dads-disclosure`)。ソースコミットハッシュをファイル冒頭コメントに記録(D24 と同じ vendoring パターン)。(3) `src/render.ts` のマークアップを変更: ボタンに `class="dads-button"` + `data-type`/`data-size` 属性を追加、チェックボックスを `.dads-checkbox` 構造に変更(既存のイベントリスナーは流用)、`<details>`/`<summary>` に `.dads-disclosure` クラスと開閉アイコン SVG を追加。(4) Notice(`.notice`)をセマンティックカラートークン(`--color-semantic-warning-yellow-1`/`--color-semantic-error-1`/`--color-neutral-solid-gray-536`)で装飾。(5) フォント: Google Fonts の Noto Sans JP を読み込まず、`--font-family-sans` トークンの値(デフォルトはシステムフォント)にフォールバック(D24 と一貫させる)。
 
 **Consequences**: 視覚的には政府デザインシステムに準拠した UI になる一方、notification-banner 等の複雑なコンポーネントは完全に移植せず、この UI スケール(フォーム1画面+地図パネル)に見合った軽量実装を維持。`@digital-go-jp/design-tokens` の将来のメジャーバージョンアップ時には `index.html` の CDN URL(バージョン文字列)を手動更新する必要がある。コンポーネント CSS は vendored snapshot のため、デザインシステム側の将来変更は自動追随しない。意図的な逸脱として、Notice は DADS の `notification-banner`(アイコン+見出し+閉じるボタン+タイムスタンプの複雑な grid レイアウト)の完全再現ではなく、色トークンのみの軽量実装。
+
+## D26: 等高線を主題レイヤーの上に描画する
+
+**Status**: Accepted
+
+**Context**: ユーザーが「等高線も塗り面(主題レイヤー)の上に描画されてほしい」と要望。地形と警戒区域等の関係性を視覚的に理解しやすくする目的。現在のレイヤー順序(`[...before(等高線含む), ...主題レイヤー, ...after]`)では等高線が主題レイヤーの下に隠れるため、見た目に反映されない。
+
+**Decision**: `src/base-style.json` の `before` セクションから等高線レイヤー(bvmap-等高線・bvmap-等深線)を抽出し、新しい `contours` セクションに分離する。`src/style.ts` の `buildStyle()` で、レイヤー合成順を `[...baseStyle.before, ...thematicLayers, ...contours, ...baseStyle.after]` に変更する。これにより等高線は主題レイヤーの直後・道路/ラベルの前に描画される。
+
+**Consequences**: 等高線が主題レイヤーの上に見えるようになり、地形と主題データの視覚的関係が明確化。等高線は細い線(line layer)なので、主題レイヤーのパターンフィル(点や線模様)の上に重ねても読みやすく、視認性に問題なし。視覚的優先度として「ラベル > 道路 > 等高線 > 主題レイヤー」が自然で一貫性がある。
+
+## D27: `docs/` を vite-plugin-singlefile で単一ファイル化する
+
+**Status**: Accepted
+
+**Context**: Issue #1 に「`docs/` 生成物をシングルファイルにする」と要望。現在は HTML・JS・CSS が分かれており、HTTPリクエスト数が3(HTML/JS/CSS)。単一ファイル化することで HTTP リクエスト削減、配布・管理の簡潔化。
+
+**Decision**: `vite-plugin-singlefile` npm パッケージをインストールし、`vite.config.ts` で `viteSingleFile()` プラグインを有効化。プラグインが自動的にビルド時に JS/CSS を `index.html` に埋め込む。
+
+**Consequences**: `docs/` に `index.html` と `.nojekyll` のみが出力されるようになり、`docs/assets/` ディレクトリが消滅。ファイルサイズ: `index.html` ~1.2MB (gzip: ~317KB)。HTTP リクエスト数が 3 → 1 に削減。`docs/index.html` 単独ですべての機能が動作するため、ファイル配布やミラーリングが単純化。ビルドサイズ警告(chunk > 500KB)は MapLibre のバンドル由来で回避不可能だが、gzip圧縮後は許容範囲。
 
 ## バックログ(未決定・保留)
 

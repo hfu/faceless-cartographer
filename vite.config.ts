@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { viteSingleFile } from 'vite-plugin-singlefile';
 
 // Emits to the repo root `docs/` folder so GitHub Pages can serve this
 // directly (Settings -> Pages -> Deploy from a branch -> /docs), matching
@@ -9,6 +10,7 @@ export default defineConfig({
   // https://<user>.github.io/<repo>/, not the domain root.
   base: './',
   publicDir: 'public',
+  plugins: [viteSingleFile()],
   build: {
     outDir: 'docs',
     emptyOutDir: true

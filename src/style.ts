@@ -144,6 +144,7 @@ export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { styl
       id: sourceId,
       type: 'raster',
       source: sourceId,
+      paint: sourceId === 'relief' ? { 'raster-opacity': 0.6 } : {},
       layout: { visibility: visible }
     });
   }

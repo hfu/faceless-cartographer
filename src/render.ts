@@ -220,10 +220,16 @@ export function renderMapView(
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
   map.addControl(new maplibregl.TerrainControl({ source: 'mapterhorn', exaggeration: 1 }), 'top-right');
 
-  // Layer Control: collect all non-background thematic layers for the control
+  // Layer Control: show only thematic layers (resolved), exclude bvmap background layers
   try {
-    // Collect source_ids of all resolved (required + optional) layers for LayerControl
-    const thematicLayerIds = resolved.map((r) => r.source_id);
+    // Collect actual MapLibre layer IDs that correspond to resolved (required + optional) layers
+    const thematicSourceIds = new Set(resolved.map((r) => r.source_id));
+    const thematicLayerIds = style.layers
+      .filter((layer) => {
+        const source = layer.source as string | undefined;
+        return source && thematicSourceIds.has(source);
+      })
+      .map((layer) => layer.id as string);
 
     const layerControl = new LayerControl({
       collapsed: false,

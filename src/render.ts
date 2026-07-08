@@ -78,15 +78,24 @@ export function renderFormView(
       ${errorBlock}
       <form id="intent-form">
         <textarea name="map_intent" rows="22">${value}</textarea>
-        <p><button type="submit">Render</button></p>
+        <p><button type="submit" class="dads-button" data-type="solid-fill" data-size="md">Render</button></p>
       </form>
     </div>
     <div class="card">
-      <details>
-        <summary>現在の Staff プロンプト</summary>
-        <p style="font-size:0.82rem;color:#555;">このCartographerと組み合わせて使う Staff エージェントのシステムプロンプトに、そのまま追加できる内容です。取得元: <a href="https://github.com/hfu/layers-martin/blob/main/STAFF_PROMPT.md" target="_blank" rel="noreferrer">hfu/layers-martin STAFF_PROMPT.md</a></p>
-        <p><button id="copy-staff-prompt" type="button">Copy Staff Prompt</button></p>
-        <pre>${staffPrompt}</pre>
+      <details class="dads-disclosure">
+        <summary class="dads-disclosure__summary">
+          <svg class="dads-disclosure__icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="11" fill="currentcolor"/>
+            <circle class="dads-disclosure__icon-circle" cx="12" cy="12" r="8" fill="currentcolor"/>
+            <path class="dads-disclosure__icon-triangle" d="M17 10H7L12 15L17 10Z" fill="Canvas"/>
+          </svg>
+          現在の Staff プロンプト
+        </summary>
+        <div class="dads-disclosure__content">
+          <p style="font-size:0.82rem;color:#555;">このCartographerと組み合わせて使う Staff エージェントのシステムプロンプトに、そのまま追加できる内容です。取得元: <a href="https://github.com/hfu/layers-martin/blob/main/STAFF_PROMPT.md" target="_blank" rel="noreferrer">hfu/layers-martin STAFF_PROMPT.md</a></p>
+          <p><button id="copy-staff-prompt" type="button" class="dads-button" data-type="outline" data-size="md">Copy Staff Prompt</button></p>
+          <pre>${staffPrompt}</pre>
+        </div>
       </details>
     </div>
   </div>
@@ -152,9 +161,12 @@ export function renderMapView(
   const toggles = optionalLayers
     .map(
       (r) =>
-        `<label style="display:block"><input type="checkbox" data-layer-toggle="${escapeHtml(r.source_id)}"> ${escapeHtml(
-          r.label ?? r.source_id
-        )}</label>`
+        `<label class="dads-checkbox" data-size="sm">
+          <span class="dads-checkbox__checkbox">
+            <input class="dads-checkbox__input" type="checkbox" data-layer-toggle="${escapeHtml(r.source_id)}">
+          </span>
+          <span class="dads-checkbox__label">${escapeHtml(r.label ?? r.source_id)}</span>
+        </label>`
     )
     .join('\n');
 
@@ -169,13 +181,22 @@ export function renderMapView(
     ${urlShareNotice}
     ${optionalLayers.length > 0 ? `<div class="layers"><strong>任意レイヤー</strong>${toggles}</div>` : ''}
     <div class="actions">
-      <button id="copy-intent" type="button">Copy Map Intent</button>
-      <button id="back-button" type="button">戻る</button>
+      <button id="copy-intent" type="button" class="dads-button" data-type="solid-fill" data-size="md">Copy Map Intent</button>
+      <button id="back-button" type="button" class="dads-button" data-type="outline" data-size="md">戻る</button>
     </div>
   </div>
-  <details id="legend">
-    <summary>凡例</summary>
-    <div class="legend-body"></div>
+  <details id="legend" class="dads-disclosure">
+    <summary class="dads-disclosure__summary">
+      <svg class="dads-disclosure__icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="11" fill="currentcolor"/>
+        <circle class="dads-disclosure__icon-circle" cx="12" cy="12" r="8" fill="currentcolor"/>
+        <path class="dads-disclosure__icon-triangle" d="M17 10H7L12 15L17 10Z" fill="Canvas"/>
+      </svg>
+      凡例
+    </summary>
+    <div class="dads-disclosure__content">
+      <div class="legend-body"></div>
+    </div>
   </details>
 </div>`;
 

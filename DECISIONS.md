@@ -30,6 +30,7 @@
 | [D22](#d22-staffプロンプトにコピーボタンを追加しsummary内のリンクを外に出す) | Staffプロンプトにコピーボタンを追加し、`<summary>`内のリンクを外に出す | Accepted | 2026-07-04 |
 | [D23](#d23-vector_layersスキーマが既知のベクトルタイルは幾何タイプ別に汎用描画する複数カタログ統合はaggregatorを作らずmap-intentの複数active_catalogsで実現する) | `vector_layers`スキーマが既知のベクトルタイルは幾何タイプ別に汎用描画する。複数カタログ統合はaggregatorを作らずMap Intentの複数`active_catalogs`で実現する | Accepted | 2026-07-04 |
 | [D24](#d24-背景地図を-bvmap-グレースケール--mapterhorn-hillshade--terrain-に固定して常時描画する) | 背景地図を bvmap グレースケール + Mapterhorn hillshade + terrain に固定して常時描画する | Accepted | 2026-07-08 |
+| [D25](#d25-デジタル庁デザインシステムへの部分準拠トークンとアクセシビリティパターン採用) | デジタル庁デザインシステムへの部分準拠(トークンとアクセシビリティパターン採用) | Accepted | 2026-07-08 |
 
 ---
 
@@ -315,14 +316,22 @@ Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクト
 
 **Consequences**: 背景地図が Map Intent に依存しない既定動作になる。旧来の意図で `source_id: "std"` を要求する Map Intent も無改修のまま解決・描画され続けるが、その `"std"` レイヤーは実際には bvmap より上に重なり、背景として見えなくなる(冗長かつ無害)。この動作は Postel's law(入力には寛容に)に従い、特別扱いのコードは追加しない。kitavolca 側で bvmap スタイル・レイヤー順が将来変更されても自動追随しない(vendored snapshot のため)が、その場合は `src/base-style.json` を手動で再度抽出・更新することで対応する。`gsi-cyberjapan.github.io/optimal_bvmap` へのビルド時外部依存(glyphs/sprite URL)が新規に発生。D6 で定めた Japan-wide の既定ビューは bvmap も GSI由来のため、整合性は維持される。
 
+## D25: デジタル庁デザインシステムへの部分準拠(トークンとアクセシビリティパターン採用)
+
+**Status**: Accepted
+
+**Context**: バックログの「デジタル庁デザインシステムへの準拠」項目に、準拠レベル(a:フル採用 vs b:トークンのみ vs c:参考のみ)を確定させる判断が待っていた。[design.digital.go.jp](https://design.digital.go.jp/) の実装を調査した結果: `@digital-go-jp/design-tokens`(npm, MIT License, v2.0.1)は unpkg CDN 経由で配信され、色プリミティブ・セマンティックカラー・typography・spacing・border-radius・elevation 等のトークンを CSS カスタムプロパティとして提供している。コンポーネント(Button/Checkbox/Disclosure等)の実装は `digital-go-jp/design-system-example-components-html` の HTML サンプルのみにあり、npm パッケージとしては配布されていない。
+
+**Decision**: 準拠レベル:トークン+アクセシビリティパターンを採用し、コンポーネント CSS は vendoring する。(1) `index.html` の `<head>` に `@digital-go-jp/design-tokens` を CDN 経由で追加(バージョン固定)。(2) `src/dads-components.css` を新規作成し、`digital-go-jp/design-system-example-components-html`(commit `3b34f4c`)から必要なクラスのみを移植: `global.css`(`:focus-visible` outline、リンク配色)、`button.css`(`.dads-button[data-type="solid-fill"|"outline"][data-size="md"]`)、`checkbox.css`(`.dads-checkbox[data-size="sm"]`)、`disclosure.css`(`.dads-disclosure`)。ソースコミットハッシュをファイル冒頭コメントに記録(D24 と同じ vendoring パターン)。(3) `src/render.ts` のマークアップを変更: ボタンに `class="dads-button"` + `data-type`/`data-size` 属性を追加、チェックボックスを `.dads-checkbox` 構造に変更(既存のイベントリスナーは流用)、`<details>`/`<summary>` に `.dads-disclosure` クラスと開閉アイコン SVG を追加。(4) Notice(`.notice`)をセマンティックカラートークン(`--color-semantic-warning-yellow-1`/`--color-semantic-error-1`/`--color-neutral-solid-gray-536`)で装飾。(5) フォント: Google Fonts の Noto Sans JP を読み込まず、`--font-family-sans` トークンの値(デフォルトはシステムフォント)にフォールバック(D24 と一貫させる)。
+
+**Consequences**: 視覚的には政府デザインシステムに準拠した UI になる一方、notification-banner 等の複雑なコンポーネントは完全に移植せず、この UI スケール(フォーム1画面+地図パネル)に見合った軽量実装を維持。`@digital-go-jp/design-tokens` の将来のメジャーバージョンアップ時には `index.html` の CDN URL(バージョン文字列)を手動更新する必要がある。コンポーネント CSS は vendored snapshot のため、デザインシステム側の将来変更は自動追随しない。意図的な逸脱として、Notice は DADS の `notification-banner`(アイコン+見出し+閉じるボタン+タイムスタンプの複雑な grid レイアウト)の完全再現ではなく、色トークンのみの軽量実装。
+
 ## バックログ(未決定・保留)
 
 ### 凡例(legend)が画面上で分からない(解消: D14 + layers-martin D18)
 
 ~~実際に使ってみると...~~ 2026-07-03、`layers-martin` 側にTileJSON拡張 `legend_image_url` を新設し(D18)、Cartographer側に表示中レイヤーのみの折りたたみ凡例パネルを実装した(D14)。解消済みのため削除。
 
-### デジタル庁デザインシステムへの準拠
+### デジタル庁デザインシステムへの準拠(解消: D25)
 
-日本のデジタル庁が公開している[デザインシステム](https://design.digital.go.jp/)に、可能な範囲で準拠していきたい。現状のUI(D11のフローティングパネル、D14の凡例)は独自のCSSで組んでおり、デジタル庁デザインシステムのコンポーネント・カラートークン・タイポグラフィ等とは特に揃えていない。
-
-すぐに着手する優先度ではないが、方向性として: (a) デザインシステムをそのまま採用する(コンポーネントライブラリとして導入)か、(b) カラートークンやスペーシングの考え方だけ参考にしつつ独自実装を続けるか、(c) 政府機関向けサービスではないためどこまで律儀に準拠する必要があるか、といった判断が必要になる。着手する際に改めて検討する。
+2026-07-08、`@digital-go-jp/design-tokens` CDN + vendored component CSS による部分準拠を実装した(D25)。トークン(色・typography・spacing・border-radius・elevation)とアクセシビリティパターン(focus-visible outline・リンク配色)を採用し、Button/Checkbox/Disclosure のクラス構造も DADS に合わせた。完全な政府品質コンポーネント(notification-banner等)の再現ではなく、このUIスケール(フォーム+パネル)に見合った投資レベルでの準拠。

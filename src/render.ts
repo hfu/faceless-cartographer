@@ -1,6 +1,7 @@
 import maplibregl from 'maplibre-gl';
 import { load as yamlLoad, dump as yamlDump } from 'js-yaml';
 import { LayerControl } from 'maplibre-gl-layer-control';
+import 'maplibre-gl-layer-control/style.css';
 import type { MapIntent, ResolvedLayer } from './types.ts';
 import type { InitialView, MapLibreStyle } from './style.ts';
 

@@ -143,9 +143,11 @@ export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { styl
     });
   }
 
+  const contours = (baseStyle as Record<string, unknown>).contours as Array<Record<string, unknown>> | undefined || [];
   const layers = [
     ...baseStyle.before,
     ...thematicLayers,
+    ...contours,
     ...baseStyle.after
   ];
 

@@ -753,119 +753,6 @@
       }
     },
     {
-      "id": "bvmap-等高線",
-      "type": "line",
-      "source": "bvmap",
-      "source-layer": "Cntr",
-      "paint": {
-        "line-color": "rgb(161,161,161)",
-        "line-width": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0.7,
-          12,
-          0.7,
-          13,
-          [
-            "case",
-            [
-              "==",
-              [
-                "%",
-                [
-                  "get",
-                  "vt_alti"
-                ],
-                50
-              ],
-              0
-            ],
-            1.4,
-            0.7
-          ]
-        ],
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0,
-          10,
-          [
-            "case",
-            [
-              "==",
-              [
-                "%",
-                [
-                  "get",
-                  "vt_alti"
-                ],
-                50
-              ],
-              0
-            ],
-            1,
-            0
-          ],
-          14,
-          [
-            "case",
-            [
-              "==",
-              [
-                "%",
-                [
-                  "get",
-                  "vt_alti"
-                ],
-                50
-              ],
-              0
-            ],
-            1,
-            0
-          ],
-          15,
-          1,
-          16,
-          [
-            "case",
-            [
-              "==",
-              [
-                "get",
-                "vt_code"
-              ],
-              7353
-            ],
-            0,
-            1
-          ]
-        ]
-      }
-    },
-    {
-      "id": "bvmap-等深線",
-      "type": "line",
-      "source": "bvmap",
-      "source-layer": "Isbt",
-      "paint": {
-        "line-color": "rgb(88,88,88)",
-        "line-width": 1
-      }
-    },
-    {
       "id": "bvmap-地形表記線",
       "type": "line",
       "source": "bvmap",
@@ -27434,6 +27321,121 @@
         ],
         "text-halo-color": "rgba(255,255,255,1)",
         "text-halo-width": 1
+      }
+    }
+  ],
+  "contours": [
+    {
+      "id": "bvmap-等高線",
+      "type": "line",
+      "source": "bvmap",
+      "source-layer": "Cntr",
+      "paint": {
+        "line-color": "rgb(161,161,161)",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          9,
+          0.7,
+          12,
+          0.7,
+          13,
+          [
+            "case",
+            [
+              "==",
+              [
+                "%",
+                [
+                  "get",
+                  "vt_alti"
+                ],
+                50
+              ],
+              0
+            ],
+            1.4,
+            0.7
+          ]
+        ],
+        "line-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          9,
+          0,
+          10,
+          [
+            "case",
+            [
+              "==",
+              [
+                "%",
+                [
+                  "get",
+                  "vt_alti"
+                ],
+                50
+              ],
+              0
+            ],
+            1,
+            0
+          ],
+          14,
+          [
+            "case",
+            [
+              "==",
+              [
+                "%",
+                [
+                  "get",
+                  "vt_alti"
+                ],
+                50
+              ],
+              0
+            ],
+            1,
+            0
+          ],
+          15,
+          1,
+          16,
+          [
+            "case",
+            [
+              "==",
+              [
+                "get",
+                "vt_code"
+              ],
+              7353
+            ],
+            0,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "id": "bvmap-等深線",
+      "type": "line",
+      "source": "bvmap",
+      "source-layer": "Isbt",
+      "paint": {
+        "line-color": "rgb(88,88,88)",
+        "line-width": 1
       }
     }
   ]

@@ -33,6 +33,7 @@
 | [D25](#d25-デジタル庁デザインシステムへの部分準拠トークンとアクセシビリティパターン採用) | デジタル庁デザインシステムへの部分準拠(トークンとアクセシビリティパターン採用) | Accepted | 2026-07-08 |
 | [D26](#d26-等高線を主題レイヤーの上に描画する) | 等高線を主題レイヤーの上に描画する | Accepted | 2026-07-08 |
 | [D27](#d27-docs-を-vite-plugin-singlefile-で単一ファイル化する) | `docs/` を vite-plugin-singlefile で単一ファイル化する | Accepted | 2026-07-08 |
+| [D28](#d28-デフォルト-map-intent-を札幌の地形分類に更新しハイブリッド対応-staff_prompt-を実装テスト) | デフォルト Map Intent を札幌の地形分類に更新し、ハイブリッド対応 STAFF_PROMPT を実装テスト | Accepted | 2026-07-09 |
 
 ---
 
@@ -347,6 +348,24 @@ Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクト
 **Decision**: `vite-plugin-singlefile` npm パッケージをインストールし、`vite.config.ts` で `viteSingleFile()` プラグインを有効化。プラグインが自動的にビルド時に JS/CSS を `index.html` に埋め込む。
 
 **Consequences**: `docs/` に `index.html` と `.nojekyll` のみが出力されるようになり、`docs/assets/` ディレクトリが消滅。ファイルサイズ: `index.html` ~1.2MB (gzip: ~317KB)。HTTP リクエスト数が 3 → 1 に削減。`docs/index.html` 単独ですべての機能が動作するため、ファイル配布やミラーリングが単純化。ビルドサイズ警告(chunk > 500KB)は MapLibre のバンドル由来で回避不可能だが、gzip圧縮後は許容範囲。
+
+## D28: デフォルト Map Intent を札幌の地形分類に更新し、ハイブリッド対応 STAFF_PROMPT を実装テスト
+
+**Status**: Accepted
+
+**Context**: `hfu/layers-martin` が `STAFF_PROMPT.md` をハイブリッド対応(オンライン/オフライン両立)に再設計した([layers-martin D23](https://github.com/hfu/layers-martin/blob/main/DECISIONS.md#d23-staff_promptmdをハイブリッド対応オンラインオフライン両立に設計する))。新しい「オフラインフォールバック」セクションが実用的に機能するか、実装テストが必要だった。テスト入力：「札幌の地形分類を見たい」。
+
+**Decision**: 
+- デフォルト Map Intent を既存の「土砂災害警戒区域」から「札幌市の地形分類」に変更
+- STAFF_PROMPT の guidance に従って生成: 札幌 bbox `[141.0, 42.88, 141.5, 43.25]`、`lcmfc2`(治水地形分類図) + `relief`(色別標高図) + `lcm25k_2012`(土地条件図、補助)
+- 生成した Map Intent が layers-martin カタログで完全に解決可能なことを検証: 全 source_id 存在確認、メタデータ適切、minzoom/maxzoom 妥当
+- `src/render.ts` の `EXAMPLE_MAP_INTENT` (行6-33)を新バージョンに置き換え
+
+**Consequences**:
+- ハイブリッド対応 STAFF_PROMPT が実用的に機能することを実装で証明。オンライン環境（カタログ fetch）でも、オフライン環境（参考リスト）でも、同じ入力から有効な Map Intent が生成される
+- デフォルト Map Intent が地形・土地条件というより地理学的な内容に(従来の災害リスク中心から拡張)。プリフィル表示が多角的な地図用途をカバーするようになった
+- faceless-cartographer UI を開いたユーザーには、札幌市の地形分類が既定で表示される。実装テストとしての特性を残しつつ、実用的な例として機能
+- 可逆的な決定: 将来別のテストケースが必要なら、この EXAMPLE_MAP_INTENT は再度変更可能。layers-martin D23 の成熟度を確認した後、より汎用的なサンプルに戻してもよい
 
 ## バックログ(未決定・保留)
 

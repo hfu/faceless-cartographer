@@ -189,16 +189,14 @@ export function renderMapView(
       <button id="back-button" type="button" class="dads-button" data-type="outline" data-size="md">戻る</button>
     </div>
   </div>
-  <details id="legend" class="dads-disclosure">
-    <summary class="dads-disclosure__summary">
-      <svg class="dads-disclosure__icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="11" fill="currentcolor"/>
-        <circle class="dads-disclosure__icon-circle" cx="12" cy="12" r="8" fill="currentcolor"/>
-        <path class="dads-disclosure__icon-triangle" d="M17 10H7L12 15L17 10Z" fill="Canvas"/>
+  <details id="legend" class="legend-panel">
+    <summary class="legend-panel__summary">
+      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style="display:inline-block;margin-right:4px;">
+        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" fill="currentColor"/>
       </svg>
       凡例
     </summary>
-    <div class="dads-disclosure__content">
+    <div class="legend-panel__content">
       <div class="legend-body"></div>
     </div>
   </details>
@@ -274,7 +272,7 @@ export function renderMapView(
   try {
     const layerControlDefs = buildLayerControlDefinitions();
     const layerControl = new LayerControl(layerControlDefs as Record<string, unknown>);
-    map.addControl(layerControl, 'bottom-right');
+    map.addControl(layerControl, 'bottom-left');
   } catch (e) {
     // Graceful degradation: if LayerControl fails to initialize, continue without it
     console.warn('LayerControl initialization failed; proceeding without layer panel', e);

@@ -42,17 +42,37 @@
   .panel .actions { display: flex; gap: .5rem; align-items: center; margin-top: .6rem; flex-wrap: wrap; }
   @media (max-width: 30rem) { .panel { max-width: none; } }
 
+  /* Legend panel: transparent, MapLibre-style (no background, sharp corners) */
   #legend {
-    position: absolute; bottom: 1rem; right: 1rem; max-width: min(16rem, calc(100vw - 2rem));
-    max-height: calc(100vh - 2rem); overflow-y: auto;
-    background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border-radius: var(--border-radius-12); box-shadow: var(--elevation-1); z-index: 10; font-size: 0.82rem; display: none;
+    position: absolute; bottom: 1rem; left: 5rem;
+    max-width: min(14rem, calc(100vw - 6rem));
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    background: transparent;
+    z-index: 10;
+    font-size: 0.82rem;
+    display: none;
   }
   #legend[data-has-entries="true"] { display: block; }
-  #legend .legend-body { padding: 0 .7rem .7rem; }
-  #legend .legend-entry { margin-top: .5rem; }
-  #legend .legend-entry .label { display: block; font-size: 0.76rem; color: #444; margin-bottom: .2rem; }
-  #legend .legend-entry img { max-width: 100%; display: block; border-radius: var(--border-radius-8); }
+  #legend summary {
+    cursor: pointer;
+    padding: 0.4rem 0;
+    color: #222;
+    font-weight: 500;
+    user-select: none;
+    list-style: none;
+  }
+  #legend summary::-webkit-details-marker { display: none; }
+  #legend .legend-body {
+    padding: 0.5rem 0 0;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0.6rem 0.7rem;
+    border-radius: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  }
+  #legend .legend-entry { margin-top: .4rem; }
+  #legend .legend-entry .label { display: block; font-size: 0.76rem; color: #555; margin-bottom: .2rem; }
+  #legend .legend-entry img { max-width: 100%; display: block; }
   .maplibregl-ctrl-bottom-left { max-width: calc(100vw - 12rem); }
 </style>
 </head>

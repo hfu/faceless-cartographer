@@ -5,10 +5,10 @@ import type { MapIntent, ResolvedLayer } from './types.ts';
 import type { InitialView, MapLibreStyle } from './style.ts';
 
 const EXAMPLE_MAP_INTENT = `spec_version: "map-intent/v2"
-goal: "対象地域における土砂災害警戒区域（土石流・地すべり・急傾斜地の崩壊）の分布を、背景地形とともに示す。hillshade と fill layer の blend-mode を検証する。"
+goal: "札幌市域における地形分類の分布を、背景地形とともに示す。治水地形分類図により地盤高度や地形の成因を把握。"
 area:
-  name: null
-  bbox: null
+  name: "札幌市"
+  bbox: [141.0, 42.88, 141.5, 43.25]
 catalog_context:
   active_catalogs:
     - id: "layers-martin"
@@ -16,24 +16,22 @@ catalog_context:
       uri: "https://hfu.github.io/layers-martin/catalog"
       version: "2026-07-09T00:00:00Z"
 required_layers:
-  - source_id: "05_dosekiryukeikaikuiki"
-    label: "土石流の警戒区域・特別警戒区域"
-  - source_id: "05_jisuberikeikaikuiki"
-    label: "地すべりの警戒区域・特別警戒区域"
-  - source_id: "05_kyukeishakeikaikuiki"
-    label: "急傾斜地の崩壊の警戒区域・特別警戒区域"
+  - source_id: "lcmfc2"
+    label: "治水地形分類図（札幌市）"
+  - source_id: "relief"
+    label: "色別標高図（背景地形）"
 optional_layers:
-  - source_id: "landslide"
-    label: "地すべり地形分布図（防災科学技術研究所、現況の警戒区域とは別の地形学的観点の補助情報）"
+  - source_id: "lcm25k_2012"
+    label: "数値地図25000(土地条件図、詳細参考用)"
 relationships_to_highlight:
-  - "警戒区域分布と背景地形(hillshade)の視覚的関係"
+  - "地形分類と標高の関係（低地・台地・山地の分布）"
 sharing_policy:
   url_share: false
   intent_share: true
 provenance:
-  generated_by: "blend-mode-test"
+  generated_by: "faceless-cartographer"
   generated_at: "2026-07-09T00:00:00Z"
-  intent_id: "test-blend-mode-validation"
+  intent_id: "example-sapporo-terrain"
 `;
 
 function escapeHtml(value: string): string {
@@ -216,7 +214,7 @@ export function renderMapView(
     map.fitBounds(view.bounds, { padding: 40, duration: 0 });
   }
   map.addControl(new maplibregl.NavigationControl());
-  map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+  map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
   map.addControl(new maplibregl.TerrainControl({ source: 'mapterhorn', exaggeration: 1 }), 'top-right');
 
   // Layer Control: group layers by source_id, hiding generic sub-layer details (fill/line/circle)
@@ -271,7 +269,10 @@ export function renderMapView(
 
   try {
     const layerControlDefs = buildLayerControlDefinitions();
-    const layerControl = new LayerControl(layerControlDefs as Record<string, unknown>);
+    const layerControl = new LayerControl({
+      ...layerControlDefs,
+      compact: false
+    } as Record<string, unknown>);
     map.addControl(layerControl, 'bottom-left');
   } catch (e) {
     // Graceful degradation: if LayerControl fails to initialize, continue without it

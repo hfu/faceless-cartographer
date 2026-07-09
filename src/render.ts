@@ -163,7 +163,13 @@ export function renderMapView(
     ? `<div class="notice">この Map Intent は <code>sharing_policy.url_share: true</code> を指定していますが、この Cartographer では URL のクエリ文字列やパスに地図の状態を保持する仕組み(ブックマーク可能な永続的URL共有)はサポートされません(faceless構成、ADR 0001)。共有には「Copy Map Intent」ボタン、または「Copy Shareable Link」ボタンが生成する一回限りのフラグメント付きURL(<code>#intent=...</code>、読み込み直後に消去されブックマークとして残らない)をご利用ください。</div>`
     : '';
 
+  const requiredLayers = resolved.filter((r) => r.required);
   const optionalLayers = resolved.filter((r) => !r.required);
+
+  const requiredLayerList = requiredLayers
+    .map((r) => `<span class="layer-label">${escapeHtml(r.label ?? r.source_id)}</span>`)
+    .join('\n');
+
   const toggles = optionalLayers
     .map(
       (r) =>
@@ -179,30 +185,31 @@ export function renderMapView(
   container.innerHTML = `
 <div class="map-view">
   <div id="map"></div>
-  <div class="panel">
-    <h1>faceless-cartographer</h1>
-    <p>${escapeHtml(intent.goal)}</p>
-    ${missingNotice}
-    ${unrenderableNotice}
-    ${urlShareNotice}
-    ${optionalLayers.length > 0 ? `<div class="layers"><strong>任意レイヤー</strong>${toggles}</div>` : ''}
-    <div class="actions">
-      <button id="copy-intent" type="button" class="dads-button" data-type="solid-fill" data-size="md">Copy Map Intent</button>
-      <button id="copy-share-link" type="button" class="dads-button" data-type="outline" data-size="md">Copy Shareable Link</button>
-      <button id="back-button" type="button" class="dads-button" data-type="outline" data-size="md">戻る</button>
+  <div class="panel" data-collapsed="false">
+    <button id="panel-toggle" class="panel__toggle" type="button" aria-expanded="true" aria-label="パネルを折りたたむ/展開する">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="display:inline-block;">
+        <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="panel__content">
+      <h1>faceless-cartographer</h1>
+      <p>${escapeHtml(intent.goal)}</p>
+      ${missingNotice}
+      ${unrenderableNotice}
+      ${urlShareNotice}
+      ${requiredLayers.length > 0 ? `<div class="layers"><strong>表示中のレイヤー</strong>${requiredLayerList}</div>` : ''}
+      ${optionalLayers.length > 0 ? `<div class="layers"><strong>任意レイヤー</strong>${toggles}</div>` : ''}
+      <div class="legend-section" data-has-entries="false">
+        <strong>凡例</strong>
+        <div class="legend-body"></div>
+      </div>
+      <div class="actions">
+        <button id="copy-intent" type="button" class="dads-button" data-type="solid-fill" data-size="md">Copy Map Intent</button>
+        <button id="copy-share-link" type="button" class="dads-button" data-type="outline" data-size="md">Copy Shareable Link</button>
+        <button id="back-button" type="button" class="dads-button" data-type="outline" data-size="md">戻る</button>
+      </div>
     </div>
   </div>
-  <details id="legend" class="legend-panel">
-    <summary class="legend-panel__summary">
-      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style="display:inline-block;margin-right:4px;">
-        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" fill="currentColor"/>
-      </svg>
-      凡例
-    </summary>
-    <div class="legend-panel__content">
-      <div class="legend-body"></div>
-    </div>
-  </details>
 </div>`;
 
   const map = new maplibregl.Map({
@@ -237,7 +244,7 @@ export function renderMapView(
       collapsed: true,
       layers: thematicLayerIds
     });
-    map.addControl(layerControl, 'bottom-left');
+    map.addControl(layerControl, 'top-right');
   } catch (e) {
     // Graceful degradation: if LayerControl fails to initialize, continue without it
     console.warn('LayerControl initialization failed; proceeding without layer panel', e);
@@ -257,12 +264,12 @@ export function renderMapView(
   legendBySourceId.forEach((_v, id) => visibility.set(id, false));
   resolved.filter((r) => r.required).forEach((r) => visibility.set(r.source_id, true));
 
-  const legendRoot = container.querySelector<HTMLElement>('#legend')!;
-  const legendBody = legendRoot.querySelector<HTMLElement>('.legend-body')!;
+  const legendSection = container.querySelector<HTMLElement>('.legend-section')!;
+  const legendBody = legendSection.querySelector<HTMLElement>('.legend-body')!;
 
   function renderLegend() {
     const entries = [...legendBySourceId.entries()].filter(([id]) => visibility.get(id));
-    legendRoot.dataset.hasEntries = entries.length > 0 ? 'true' : 'false';
+    legendSection.dataset.hasEntries = entries.length > 0 ? 'true' : 'false';
     legendBody.innerHTML = '';
     for (const [, entry] of entries) {
       const wrap = document.createElement('div');
@@ -306,6 +313,14 @@ export function renderMapView(
       visibility.set(id, el.checked);
       renderLegend();
     });
+  });
+
+  const panelElement = container.querySelector<HTMLElement>('.panel')!;
+  const panelToggle = container.querySelector<HTMLButtonElement>('#panel-toggle')!;
+  panelToggle.addEventListener('click', () => {
+    const isCollapsed = panelElement.dataset.collapsed === 'true';
+    panelElement.dataset.collapsed = isCollapsed ? 'false' : 'true';
+    panelToggle.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
   });
 
   container.querySelector<HTMLButtonElement>('#back-button')!.addEventListener('click', onBack);

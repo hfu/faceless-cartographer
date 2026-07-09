@@ -30,50 +30,31 @@
   .map-view { position: fixed; inset: 0; }
   #map { position: absolute; inset: 0; }
   .panel {
-    position: absolute; top: 1rem; left: 1rem; right: 1rem; max-width: 22rem;
-    max-height: calc(100vh - 2rem); overflow-y: auto;
+    position: absolute; top: 1rem; left: 1rem; max-width: 22rem;
     background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border-radius: var(--border-radius-12); padding: .9rem 1rem; box-shadow: var(--elevation-1);
+    border-radius: var(--border-radius-12); box-shadow: var(--elevation-1);
     z-index: 10; line-height: 1.45; font-size: 0.88rem;
+    transition: width 0.2s ease, height 0.2s ease;
   }
+  .panel[data-collapsed="false"] { padding: .9rem 1rem; }
+  .panel[data-collapsed="true"] { width: 2.75rem; height: 2.75rem; padding: .4rem; overflow: hidden; }
+  .panel__toggle { background: transparent; border: none; cursor: pointer; padding: 0.2rem; color: currentColor; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1; }
+  .panel[data-collapsed="true"] .panel__toggle svg { transform: scaleX(-1); }
+  .panel__content { max-height: calc(100vh - 2rem); overflow-y: auto; display: block; }
+  .panel[data-collapsed="true"] .panel__content { display: none; }
   .panel h1 { font-size: 1rem; margin: 0 0 .4rem; }
   .panel .layers { margin: .5rem 0; }
   .panel .layers strong { display: block; margin-bottom: .2rem; }
+  .panel .layer-label { display: block; margin-bottom: .3rem; color: #555; }
+  .panel .legend-section { margin: .5rem 0; }
+  .panel .legend-section[data-has-entries="false"] { display: none; }
+  .panel .legend-section strong { display: block; margin-bottom: .2rem; }
+  .panel .legend-entry { margin-top: .4rem; }
+  .panel .legend-entry .label { display: block; font-size: 0.76rem; color: #555; margin-bottom: .2rem; }
+  .panel .legend-entry img { max-width: 100%; display: block; }
   .panel .actions { display: flex; gap: .5rem; align-items: center; margin-top: .6rem; flex-wrap: wrap; }
   @media (max-width: 30rem) { .panel { max-width: none; } }
-
-  /* Legend panel: transparent, MapLibre-style (no background, sharp corners) */
-  #legend {
-    position: absolute; bottom: 1rem; left: 5rem;
-    max-width: min(14rem, calc(100vw - 6rem));
-    max-height: calc(100vh - 2rem);
-    overflow-y: auto;
-    background: transparent;
-    z-index: 10;
-    font-size: 0.82rem;
-    display: none;
-  }
-  #legend[data-has-entries="true"] { display: block; }
-  #legend summary {
-    cursor: pointer;
-    padding: 0.4rem 0;
-    color: #222;
-    font-weight: 500;
-    user-select: none;
-    list-style: none;
-  }
-  #legend summary::-webkit-details-marker { display: none; }
-  #legend .legend-body {
-    padding: 0.5rem 0 0;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 0.6rem 0.7rem;
-    border-radius: 2px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
-  }
-  #legend .legend-entry { margin-top: .4rem; }
-  #legend .legend-entry .label { display: block; font-size: 0.76rem; color: #555; margin-bottom: .2rem; }
-  #legend .legend-entry img { max-width: 100%; display: block; }
-  .maplibregl-ctrl-bottom-left { max-width: calc(100vw - 12rem); }
+  .maplibregl-ctrl-top-right { max-width: calc(100vw - 2rem); }
 </style>
 </head>
 <body>

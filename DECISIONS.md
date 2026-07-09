@@ -37,6 +37,7 @@
 | [D29](#d29-vector-fill-layer-で-hillshade-を透視するため-blend-mode-を導入) | Vector fill layer で hillshade を透視するため blend-mode を導入 | Accepted | 2026-07-09 |
 | [D30](#d30-maplibre-gl-layer-control-による-レイヤーパネル統合) | maplibre-gl-layer-control によるレイヤーパネル統合 | Accepted | 2026-07-09 |
 | [D31](#d31-mapterhorn-ソースの-maxzoom-14-固定を撤廃する) | Mapterhorn ソースの `maxzoom: 14` 固定を撤廃する | Accepted | 2026-07-09 |
+| [D32](#d32-map-intentを-url-フラグメントで一回限り受け渡しする-issue-3) | Map Intentを URL フラグメントで一回限り受け渡しする(Issue #3) | Accepted | 2026-07-09 |
 
 ---
 
@@ -435,6 +436,24 @@ Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクト
 **Decision**: `src/base-style.json` の `mapterhorn` raster-dem ソース定義から `"maxzoom": 14` を削除し、upstream の `tilejson.json` と同様にズーム上限を指定しない状態にする。D24 のエントリ自体は当時の判断記録として変更せず残す。
 
 **Consequences**: z16 タイルが提供されている地域ではより高解像度な地形陰影・3D地形が描画される。タイルが存在しない地域・ズームでは個別のタイルリクエストが404になり得るが、MapLibre 側は該当タイルを描画しないだけで致命的な問題にはならない。
+
+## D32: Map Intentを URL フラグメントで一回限り受け渡しする(Issue #3)
+
+**Status**: Accepted
+
+**Context**: [Issue #3](https://github.com/hfu/faceless-cartographer/issues/3) にて、Map Intentをテキストエリアへの貼り付けだけでなく、URLフラグメント(`#intent=...`)経由でも受け渡せるようにしてほしいという依頼があった。クエリ文字列と異なり、フラグメントはブラウザからサーバーへ送信されない(HTTPリクエストの一部にならない)ため、サーバー側でのMap Intentのログ記録は発生しない ―― 「faceless」原則(サーバーが利用者の地図状態を一切知らない)には抵触しないが、`UNopenGIS/staccato-spec` ADR 0001 は文言上「URL paths, query parameters, and hash MUST NOT carry map state.」「Rendered sessions keep the URL clean as `/`.」と、hashを名指しで禁止している。D18で一度扱った「文言 vs 精神」の緊張が、今回はhash自体について再度生じた形になる。
+
+**Decision**: D18と同じ論法を踏襲する: ADR 0001の**精神**(サーバーがMap Intentを一切知らない、共有は人間が仲介するテキストの受け渡し、URLがブックマーク可能な状態を持たない)を満たす限りにおいて、**文言**からの意図的な逸脱として、hashによる一回限りの受け渡しを実装する。
+
+具体的な設計:
+- `src/fragment.ts` に `encodeIntentFragment`/`decodeIntentFragment` という環境非依存の純粋関数を追加し、UTF-8テキストをbase64url化してhashペイロードとして埋め込む/取り出す。
+- ページ読み込み時(`src/main.ts` の `bootstrap()`)、`location.hash` が `#intent=...` に一致すればデコードし、**レンダリングより前に** `history.replaceState` でURLを `location.pathname + location.search` に即座に書き戻してからMap Intentを描画する(既存の `handleSubmit` をそのまま再利用、パースエラー等のハンドリングも共通)。これにより、hashは「読み込まれた瞬間に消える」一時的な受け渡し経路に留まり、ブックマークや再読み込みで再現可能な永続的URL状態には一切ならない。ADR 0001の「Rendered sessions keep the URL clean as `/`」は、レンダリング後のURLとしては引き続き文字通り満たされる。
+- 地図描画後の画面に「Copy Shareable Link」ボタンを追加(`src/render.ts`、既存の「Copy Map Intent」ボタンの隣)。クリップボードにコピーされるのは `${location.origin}${location.pathname}#intent=${encodeIntentFragment(...)}` という完全なURLで、既存の「Copy Map Intent」ボタンと同じrender_hints/cartographer_feedback反映ロジック(D11/D15、`buildCurrentIntentYaml()` として共通化)を共有する。
+- `sharing_policy.url_share` に関する既存の通知文言を、「永続的なクエリ文字列状態は引き続き未サポート」と「一回限りのフラグメント受け渡しはサポート」を区別する文言に更新した。
+
+D18の際と同様、この逸脱を実装するだけでなく、spec側の文言を明確化する提案を `UNopenGIS/staccato-spec` へPRとして提出することを検討している(D18の `UNopenGIS/staccato-spec#1` に倣う。本エントリ執筆時点ではドラフトのみで、PRは未提出)。
+
+**Consequences**: `src/fragment.ts`(新規、純粋関数、`src/fragment.test.ts` でユニットテスト)を追加。`src/main.ts` はページ読み込み時の分岐ロジックが増える(`showForm()` の無条件呼び出しから、hash判定付きの `bootstrap()` に変更)。`src/render.ts` に「Copy Shareable Link」ボタンとそのハンドラを追加。`main.ts`/`render.ts` は本プロジェクトの既存の慣習通りユニットテスト対象外(手動/ヘッドレスブラウザで検証)。URLフラグメントは(hashそのものの性質上)ブラウザ履歴・ローカルのブラウザ拡張・端末上のクリップボード履歴等には残り得るため、「サーバーに送信されない」以上の秘匿性は保証しない ―― この点は共有前提のMap Intent自体の性質(意図的に人間が読める平文であり、秘密情報を含まない設計、D2/D12)と整合している。
 
 ## バックログ(未決定・保留)
 

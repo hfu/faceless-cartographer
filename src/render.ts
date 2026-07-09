@@ -4,6 +4,7 @@ import { LayerControl } from 'maplibre-gl-layer-control';
 import 'maplibre-gl-layer-control/style.css';
 import type { MapIntent, ResolvedLayer } from './types.ts';
 import type { InitialView, MapLibreStyle } from './style.ts';
+import { encodeIntentFragment } from './fragment.ts';
 
 const EXAMPLE_MAP_INTENT = `spec_version: "map-intent/v2"
 goal: "対象地域における土砂災害警戒区域（土石流・地すべり・急傾斜地の崩壊）の分布を、背景地形とともに示す。"
@@ -159,7 +160,7 @@ export function renderMapView(
           .join(', ')}(vector_layers が catalog 側に無く、描画に必要なスタイル情報を復元できません)</div>`
       : '';
   const urlShareNotice = urlShareWarning
-    ? `<div class="notice">この Map Intent は <code>sharing_policy.url_share: true</code> を指定していますが、この Cartographer は faceless 構成(URLに状態を持たせない)で動作しているため無視されます。共有は Map Intent のテキスト自体で行ってください。</div>`
+    ? `<div class="notice">この Map Intent は <code>sharing_policy.url_share: true</code> を指定していますが、この Cartographer では URL のクエリ文字列やパスに地図の状態を保持する仕組み(ブックマーク可能な永続的URL共有)はサポートされません(faceless構成、ADR 0001)。共有には「Copy Map Intent」ボタン、または「Copy Shareable Link」ボタンが生成する一回限りのフラグメント付きURL(<code>#intent=...</code>、読み込み直後に消去されブックマークとして残らない)をご利用ください。</div>`
     : '';
 
   const optionalLayers = resolved.filter((r) => !r.required);
@@ -187,6 +188,7 @@ export function renderMapView(
     ${optionalLayers.length > 0 ? `<div class="layers"><strong>任意レイヤー</strong>${toggles}</div>` : ''}
     <div class="actions">
       <button id="copy-intent" type="button" class="dads-button" data-type="solid-fill" data-size="md">Copy Map Intent</button>
+      <button id="copy-share-link" type="button" class="dads-button" data-type="outline" data-size="md">Copy Shareable Link</button>
       <button id="back-button" type="button" class="dads-button" data-type="outline" data-size="md">戻る</button>
     </div>
   </div>
@@ -308,8 +310,8 @@ export function renderMapView(
 
   container.querySelector<HTMLButtonElement>('#back-button')!.addEventListener('click', onBack);
 
-  // Copy Map Intent with the *current* view baked into render_hints, so the
-  // copied text reproduces what's on screen right now, not just the
+  // Builds the Map Intent YAML with the *current* view baked into
+  // render_hints, so it reproduces what's on screen right now, not just the
   // original submission (map-intent-vnext.md §5: render_hints exist for
   // "practical re-opening"). If this render had resolution problems
   // (missing/unrenderable layers, an ignored url_share request), those are
@@ -318,11 +320,10 @@ export function renderMapView(
   // receives this Map Intent back can read what didn't resolve last time
   // and adjust, without Cartographer needing a separate machine-readable
   // API. Only added when there's actually something to report, so a clean
-  // render stays a clean copy. Falls back to copying the unmodified text if
-  // the YAML can't be round-tripped for any reason.
-  const copyButton = container.querySelector<HTMLButtonElement>('#copy-intent')!;
-  copyButton.addEventListener('click', async () => {
-    let toCopy = rawIntent;
+  // render stays a clean copy. Falls back to the unmodified text if the YAML
+  // can't be round-tripped for any reason. Shared by both "Copy Map Intent"
+  // and "Copy Shareable Link" so they never drift apart (D32).
+  function buildCurrentIntentYaml(): string {
     try {
       const doc = (yamlLoad(rawIntent) as Record<string, unknown>) || {};
       const center = map.getCenter();
@@ -339,15 +340,35 @@ export function renderMapView(
           unrenderable_layers: unrenderable
         };
       }
-      toCopy = yamlDump(doc);
+      return yamlDump(doc);
     } catch (e) {
-      console.error('Could not update render_hints before copying; copying the original Map Intent instead.', e);
+      console.error('Could not update render_hints; using the original Map Intent instead.', e);
+      return rawIntent;
     }
-    await navigator.clipboard.writeText(toCopy);
+  }
+
+  const copyButton = container.querySelector<HTMLButtonElement>('#copy-intent')!;
+  copyButton.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(buildCurrentIntentYaml());
     const label = copyButton.textContent;
     copyButton.textContent = 'Copied!';
     setTimeout(() => {
       copyButton.textContent = label;
+    }, 1500);
+  });
+
+  // D32: a one-shot URL fragment hand-off, never sent to the server (unlike
+  // a query string) and cleared on load before rendering -- see main.ts's
+  // bootstrap(). Not a persistent/bookmarkable URL-state mechanism.
+  const copyLinkButton = container.querySelector<HTMLButtonElement>('#copy-share-link')!;
+  copyLinkButton.addEventListener('click', async () => {
+    const yaml = buildCurrentIntentYaml();
+    const url = `${location.origin}${location.pathname}#intent=${encodeIntentFragment(yaml)}`;
+    await navigator.clipboard.writeText(url);
+    const label = copyLinkButton.textContent;
+    copyLinkButton.textContent = 'Copied!';
+    setTimeout(() => {
+      copyLinkButton.textContent = label;
     }, 1500);
   });
 }

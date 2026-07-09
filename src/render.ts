@@ -163,22 +163,22 @@ export function renderMapView(
     ? `<div class="notice">この Map Intent は <code>sharing_policy.url_share: true</code> を指定していますが、この Cartographer では URL のクエリ文字列やパスに地図の状態を保持する仕組み(ブックマーク可能な永続的URL共有)はサポートされません(faceless構成、ADR 0001)。共有には「Copy Map Intent」ボタン、または「Copy Shareable Link」ボタンが生成する一回限りのフラグメント付きURL(<code>#intent=...</code>、読み込み直後に消去されブックマークとして残らない)をご利用ください。</div>`
     : '';
 
-  const requiredLayers = resolved.filter((r) => r.required);
-  const optionalLayers = resolved.filter((r) => !r.required);
-
-  const requiredLayerList = requiredLayers
-    .map((r) => `<span class="layer-label">${escapeHtml(r.label ?? r.source_id)}</span>`)
-    .join('\n');
-
-  const toggles = optionalLayers
+  // All layers (required and optional) displayed uniformly with checkboxes
+  // Required layers default to checked; optional layers default to unchecked
+  const allLayerCheckboxes = resolved
     .map(
       (r) =>
-        `<label class="dads-checkbox" data-size="sm">
-          <span class="dads-checkbox__checkbox">
-            <input class="dads-checkbox__input" type="checkbox" data-layer-toggle="${escapeHtml(r.source_id)}">
-          </span>
-          <span class="dads-checkbox__label">${escapeHtml(r.label ?? r.source_id)}</span>
-        </label>`
+        `<div class="layer-item">
+          <label class="dads-checkbox" data-size="sm">
+            <span class="dads-checkbox__checkbox">
+              <input class="dads-checkbox__input" type="checkbox" data-layer-toggle="${escapeHtml(r.source_id)}"${r.required ? ' checked' : ''}>
+            </span>
+            <span class="dads-checkbox__label">${escapeHtml(r.label ?? r.source_id)}</span>
+          </label>
+          <div class="legend-item-inline" data-legend-for="${escapeHtml(r.source_id)}" style="display:none;margin-top:.3rem;">
+            <img src="" alt="${escapeHtml(r.label ?? r.source_id)}" style="max-width:100%;display:block;">
+          </div>
+        </div>`
     )
     .join('\n');
 
@@ -197,12 +197,7 @@ export function renderMapView(
       ${missingNotice}
       ${unrenderableNotice}
       ${urlShareNotice}
-      ${requiredLayers.length > 0 ? `<div class="layers"><strong>表示中のレイヤー</strong>${requiredLayerList}</div>` : ''}
-      ${optionalLayers.length > 0 ? `<div class="layers"><strong>任意レイヤー</strong>${toggles}</div>` : ''}
-      <div class="legend-section" data-has-entries="false">
-        <strong>凡例</strong>
-        <div class="legend-body"></div>
-      </div>
+      ${resolved.length > 0 ? `<div class="layers">${allLayerCheckboxes}</div>` : ''}
       <div class="url-reflection-control" style="margin: .5rem 0; font-size: 0.82rem;">
         <label class="dads-checkbox" data-size="sm">
           <span class="dads-checkbox__checkbox">
@@ -272,28 +267,27 @@ export function renderMapView(
   legendBySourceId.forEach((_v, id) => visibility.set(id, false));
   resolved.filter((r) => r.required).forEach((r) => visibility.set(r.source_id, true));
 
-  const legendSection = container.querySelector<HTMLElement>('.legend-section')!;
-  const legendBody = legendSection.querySelector<HTMLElement>('.legend-body')!;
+  function updateLegendDisplay() {
+    resolved.forEach((r) => {
+      const legendEl = container.querySelector<HTMLElement>(`[data-legend-for="${escapeHtml(r.source_id)}"]`);
+      if (!legendEl) return;
 
-  function renderLegend() {
-    const entries = [...legendBySourceId.entries()].filter(([id]) => visibility.get(id));
-    legendSection.dataset.hasEntries = entries.length > 0 ? 'true' : 'false';
-    legendBody.innerHTML = '';
-    for (const [, entry] of entries) {
-      const wrap = document.createElement('div');
-      wrap.className = 'legend-entry';
-      const label = document.createElement('span');
-      label.className = 'label';
-      label.textContent = entry.label;
-      const img = document.createElement('img');
-      img.src = entry.url;
-      img.alt = entry.label;
-      img.loading = 'lazy';
-      wrap.append(label, img);
-      legendBody.append(wrap);
-    }
+      const isVisible = visibility.get(r.source_id) ?? false;
+      const hasLegend = legendBySourceId.has(r.source_id);
+
+      if (isVisible && hasLegend) {
+        const entry = legendBySourceId.get(r.source_id)!;
+        legendEl.style.display = 'block';
+        const img = legendEl.querySelector('img') as HTMLImageElement;
+        img.src = entry.url;
+        img.alt = entry.label;
+        img.loading = 'lazy';
+      } else {
+        legendEl.style.display = 'none';
+      }
+    });
   }
-  renderLegend();
+  updateLegendDisplay();
 
   // A raster source has exactly one MapLibre layer named after its
   // source_id. A vector source with a known schema (D23) expands to several
@@ -319,7 +313,7 @@ export function renderMapView(
         map.setLayoutProperty(layerId, 'visibility', el.checked ? 'visible' : 'none');
       }
       visibility.set(id, el.checked);
-      renderLegend();
+      updateLegendDisplay();
       updateFragment();
     });
   });

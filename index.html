@@ -50,14 +50,10 @@
   .panel[data-collapsed="true"] .panel__content { display: none; }
   .panel h1 { font-size: 1rem; margin: 0 0 .4rem; }
   .panel .layers { margin: .5rem 0; }
-  .panel .layers strong { display: block; margin-bottom: .2rem; }
-  .panel .layer-label { display: block; margin-bottom: .3rem; color: #555; }
-  .panel .legend-section { margin: .5rem 0; }
-  .panel .legend-section[data-has-entries="false"] { display: none; }
-  .panel .legend-section strong { display: block; margin-bottom: .2rem; }
-  .panel .legend-entry { margin-top: .4rem; }
-  .panel .legend-entry .label { display: block; font-size: 0.76rem; color: #555; margin-bottom: .2rem; }
-  .panel .legend-entry img { max-width: 100%; display: block; }
+  .panel .layer-item { margin-bottom: .5rem; }
+  .panel .layer-item label { display: block; }
+  .panel .legend-item-inline { margin-top: .3rem; }
+  .panel .legend-item-inline img { max-width: 100%; display: block; }
   .panel .actions { display: flex; gap: .5rem; align-items: center; margin-top: .6rem; flex-wrap: wrap; }
   @media (max-width: 30rem) { .panel { max-width: none; } }
   .maplibregl-ctrl-top-right { max-width: calc(100vw - 2rem); }

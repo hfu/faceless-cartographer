@@ -159,9 +159,7 @@ export function renderMapView(
           .map(escapeHtml)
           .join(', ')}(vector_layers が catalog 側に無く、描画に必要なスタイル情報を復元できません)</div>`
       : '';
-  const urlShareNotice = urlShareWarning
-    ? `<div class="notice">この Map Intent は <code>sharing_policy.url_share: true</code> を指定しています。「URLに地図の状態を反映」をONにすると、パネル上部のチェックボックスでアドレスバーから URL をコピーして共有できます。URL のクエリ文字列やパスに状態を保持する仕組み(ブックマーク可能な永続的URL共有)はサポートされません(faceless構成、ADR 0001)。</div>`
-    : '';
+  const urlShareNotice = '';
 
   // All layers (required and optional) displayed uniformly with checkboxes
   // Required layers default to checked; optional layers default to unchecked
@@ -206,9 +204,9 @@ export function renderMapView(
       <div class="url-reflection-control" style="margin: .5rem 0; font-size: 0.82rem;">
         <label class="dads-checkbox" data-size="sm">
           <span class="dads-checkbox__checkbox">
-            <input class="dads-checkbox__input" type="checkbox" id="url-share-enable" aria-label="Reflect map state in URL fragment">
+            <input class="dads-checkbox__input" type="checkbox" id="url-share-enable" aria-label="Reflect Map Intent in URL fragment">
           </span>
-          <span class="dads-checkbox__label">URLに地図の状態を反映</span>
+          <span class="dads-checkbox__label">URLにMap Intentを反映</span>
         </label>
       </div>
       <div class="actions">

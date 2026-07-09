@@ -41,6 +41,7 @@
 | [D33](#d33-ui-整理-左パネルの折りたたみ化凡例統合レイヤーコントロール移設表示中レイヤー明示) | UI 整理：左パネルの折りたたみ化、凡例統合、レイヤーコントロール移設、表示中レイヤー明示 | Accepted | 2026-07-10 |
 | [D34](#d34-url-フラグメント反映を-intent-の-sharing_policy-で制御しセッション単位でトグル化) | URL フラグメント反映を intent の `sharing_policy` で制御し、セッション単位でトグル化 | Accepted | 2026-07-10 |
 | [D35](#d35-copy-shareable-link-ボタンの廃止--idempotent-cartographer-の実装) | 「Copy Shareable Link」ボタンの廃止 ―― idempotent Cartographer の実装 | Accepted | 2026-07-10 |
+| [D36](#d36-cartographer-の2つのモードfaceless-と-idempotent) | Cartographer の2つのモード（faceless と idempotent） | Accepted | 2026-07-10 |
 
 ---
 
@@ -521,6 +522,36 @@ URL fragment 自体の性質(ブラウザ内部のメモリのみ)により、re
 - ボタン数削減によりモバイルレイアウトがより安定、sticky footer の効果が向上。
 - UI が faceless 原則に一層適合（ユーザーが主動的に URL をコピーする、ボタン経由ではなく）。
 - ユーザーにはアドレスバーコピーの操作が必要（ボタンクリックより手数多い）。
+
+## D36: Cartographer の2つのモード（faceless と idempotent）
+
+**Status**: Accepted
+
+**Context**: D32・D34・D35 の実装により、Cartographer が提供する2つの運用モードが明確に区別されるようになった。
+
+1. **faceless mode**（従来・デフォルト）: URL は常に `/` でクリーンに保たれ、Map Intent はテキスト入力フォーム経由でのみ共有される。ブラウザ履歴・ブックマーク・同期サービスには URL が積み重ならない（ADR 0001 の核心）。
+
+2. **idempotent mode**（新規、セッション単位でON/OFF可能）: ユーザーが「URLにMap Intentを反映」チェックボックスを ON にすると、map state の変化（panning, zooming, layer visibility toggle）に応じて URL フラグメントが live 更新される。ユーザーはアドレスバーから直接 URL をコピーして、他者に Map Intent をシェアできる。フラグメントはセッションスコープ（ページリロードで初期化）であり、ADR 0001 の「サーバー非可視・非永続」原則を保持しつつ、ユーザーの利便性（アドレスバーコピーの簡便さ）を叶える。
+
+**Decision**:
+
+- **faceless mode が基本値**: `sharing_policy.url_share` が `true` であっても、デフォルトは faceless（チェックボックス OFF）。
+- **ユーザー主導で idempotent へ移行**: チェックボックスを ON にした瞬間から、その session に限って idempotent mode に切り替わる。
+- **UI ラベルの簡潔化**: 「URLに地図の状態を反映」から「URLにMap Intentを反映」に変更し、何が URL に入るのかを明確にした。
+- **警告文の廃止**: `sharing_policy.url_share: true` に対する詳細な説明文を削除。URL に state が入る仕組みは faceless の正式な拡張機能（D34 で設計化）であり、「サポート外」ではなく「明示的なユーザー選択」と位置付け直した。
+- **レイヤー検索機能**: 多数のレイヤーをさばくため、検索フィルタ機能を実装（D36.1）。faceless/idempotent 両モードで利用可能。
+
+**Consequences**:
+
+Positive:
+- **概念の一貫性**: 従来の「faceless とは何か」という抽象的な議論から、「Cartographer は2つの運用モードを提供する」という具体的な選択肢に落とし込めた。
+- **ユーザー体験の多様性**: sensitive data 側では faceless のまま、public data 側は idempotent でシェアリングを簡素化できる。同じ Cartographer が両用途に対応可能。
+- **セッションスコープの堅持**: ページリロード時に faceless に戻ることで、うっかり idempotent URL が bookmark 化される事態を防ぐ。
+- **軽量化**: ボタン(D35)と警告文を削除し、パネル UI がシンプルに。特にモバイル (375px) での実装効率が向上。
+
+Negative / trade-offs:
+- **学習コスト**: 従来の「faceless Cartographer」という単一の語から、「faceless mode と idempotent mode」という2値の選択肢へと概念が拡張される。ドキュメントや STAFF_PROMPT では両モードの使い分けを明記する必要がある。
+- **セッションスコープの認知**: ON した state が reload で消えることが「不便」と感じるユーザーもいるだろう。しかし persistent storage (localStorage等) への保存は、faceless baseline の意図に反し、ユーザーが無自覚に URL state を蓄積させてしまう懸念がある。
 
 ## バックログ(未決定・保留)
 

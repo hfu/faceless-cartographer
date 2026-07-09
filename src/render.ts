@@ -30,7 +30,7 @@ optional_layers:
 relationships_to_highlight:
   - "警戒区域分布と背景地形(hillshade)の視覚的関係"
 sharing_policy:
-  url_share: false
+  url_share: true
   intent_share: true
 provenance:
   generated_by: "faceless-cartographer"
@@ -203,6 +203,14 @@ export function renderMapView(
         <strong>凡例</strong>
         <div class="legend-body"></div>
       </div>
+      <div class="url-reflection-control" style="margin: .5rem 0; font-size: 0.82rem;">
+        <label class="dads-checkbox" data-size="sm">
+          <span class="dads-checkbox__checkbox">
+            <input class="dads-checkbox__input" type="checkbox" id="url-share-enable" aria-label="Reflect map state in URL fragment">
+          </span>
+          <span class="dads-checkbox__label">URLに地図の状態を反映</span>
+        </label>
+      </div>
       <div class="actions">
         <button id="copy-intent" type="button" class="dads-button" data-type="solid-fill" data-size="md">Copy Map Intent</button>
         <button id="copy-share-link" type="button" class="dads-button" data-type="outline" data-size="md">Copy Shareable Link</button>
@@ -312,7 +320,12 @@ export function renderMapView(
       }
       visibility.set(id, el.checked);
       renderLegend();
+      updateFragment();
     });
+  });
+
+  map.on('moveend', () => {
+    updateFragment();
   });
 
   const panelElement = container.querySelector<HTMLElement>('.panel')!;
@@ -362,6 +375,15 @@ export function renderMapView(
     }
   }
 
+  let urlShareEnabled = intent.sharing_policy?.url_share ?? false;
+
+  function updateFragment(): void {
+    if (!urlShareEnabled) return;
+    const yaml = buildCurrentIntentYaml();
+    const encoded = encodeIntentFragment(yaml);
+    history.replaceState(null, '', `${location.pathname}${location.search}#intent=${encoded}`);
+  }
+
   const copyButton = container.querySelector<HTMLButtonElement>('#copy-intent')!;
   copyButton.addEventListener('click', async () => {
     await navigator.clipboard.writeText(buildCurrentIntentYaml());
@@ -385,5 +407,14 @@ export function renderMapView(
     setTimeout(() => {
       copyLinkButton.textContent = label;
     }, 1500);
+  });
+
+  const urlShareToggle = container.querySelector<HTMLInputElement>('#url-share-enable')!;
+  urlShareToggle.checked = urlShareEnabled;
+  urlShareToggle.addEventListener('change', () => {
+    urlShareEnabled = urlShareToggle.checked;
+    if (urlShareEnabled) {
+      updateFragment();
+    }
   });
 }

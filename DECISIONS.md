@@ -508,3 +508,7 @@ URL fragment 自体の性質(ブラウザ内部のメモリのみ)により、re
 ### デジタル庁デザインシステムへの準拠(解消: D25)
 
 2026-07-08、`@digital-go-jp/design-tokens` CDN + vendored component CSS による部分準拠を実装した(D25)。トークン(色・typography・spacing・border-radius・elevation)とアクセシビリティパターン(focus-visible outline・リンク配色)を採用し、Button/Checkbox/Disclosure のクラス構造も DADS に合わせた。完全な政府品質コンポーネント(notification-banner等)の再現ではなく、このUIスケール(フォーム+パネル)に見合った投資レベルでの準拠。
+
+### レイヤーセクションの統一化(検討中: post-D34)
+
+現在、左パネルのレイヤーセクションは「表示中のレイヤー」(required、デフォルト表示、チェックボックス無し)と「任意レイヤー」(optional、デフォルト非表示、チェックボックス有り)に区別されている(D33)。D34 実装後、この区別を廃止してフラットに統一するを検討: すべてのレイヤーが単一リストに並び、required レイヤーのチェックボックスはデフォルトで ON・表示あり、optional レイヤーのチェックボックスはデフォルトで OFF・表示なし。見た目と振る舞いは統一されるが、セマンティクスは維持される。UI 簡潔化と一貫性向上のトレードオフを検討する。

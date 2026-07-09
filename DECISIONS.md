@@ -38,6 +38,7 @@
 | [D30](#d30-maplibre-gl-layer-control-による-レイヤーパネル統合) | maplibre-gl-layer-control によるレイヤーパネル統合 | Accepted | 2026-07-09 |
 | [D31](#d31-mapterhorn-ソースの-maxzoom-14-固定を撤廃する) | Mapterhorn ソースの `maxzoom: 14` 固定を撤廃する | Accepted | 2026-07-09 |
 | [D32](#d32-map-intentを-url-フラグメントで一回限り受け渡しする-issue-3) | Map Intentを URL フラグメントで一回限り受け渡しする(Issue #3) | Accepted | 2026-07-09 |
+| [D33](#d33-ui-整理-左パネルの折りたたみ化凡例統合レイヤーコントロール移設表示中レイヤー明示) | UI 整理：左パネルの折りたたみ化、凡例統合、レイヤーコントロール移設、表示中レイヤー明示 | Accepted | 2026-07-10 |
 
 ---
 
@@ -454,6 +455,21 @@ Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクト
 D18の際と同様、この逸脱を実装するだけでなく、spec側の文言を明確化する提案を `UNopenGIS/staccato-spec` へPRとして提出した(D18/ADR 0003の前例に倣い、ADR 0001を直接書き換えず新規の追記型ADRとする形: [UNopenGIS/staccato-spec#2](https://github.com/UNopenGIS/staccato-spec/pull/2)、ADR 0004として提案)。
 
 **Consequences**: `src/fragment.ts`(新規、純粋関数、`src/fragment.test.ts` でユニットテスト)を追加。`src/main.ts` はページ読み込み時の分岐ロジックが増える(`showForm()` の無条件呼び出しから、hash判定付きの `bootstrap()` に変更)。`src/render.ts` に「Copy Shareable Link」ボタンとそのハンドラを追加。`main.ts`/`render.ts` は本プロジェクトの既存の慣習通りユニットテスト対象外(手動/ヘッドレスブラウザで検証)。URLフラグメントは(hashそのものの性質上)ブラウザ履歴・ローカルのブラウザ拡張・端末上のクリップボード履歴等には残り得るため、「サーバーに送信されない」以上の秘匿性は保証しない ―― この点は共有前提のMap Intent自体の性質(意図的に人間が読める平文であり、秘密情報を含まない設計、D2/D12)と整合している。
+
+## D33: UI 整理：左パネルの折りたたみ化、凡例統合、レイヤーコントロール移設、表示中レイヤー明示
+
+**Status**: Accepted
+
+**Context**: 地図表示時の`.panel`(左上、タイトル・通知・レイヤー操作等)がコンテンツ量に応じて常時展開状態であり、画面左側の大半を占める問題。一方、独立した3つの要素(パネル・凡例・Layer Control)の配置と機能性が分散されていた。ユーザーから、パネルの折りたたみ化・凡例のパネル内への統合・Layer Controlの右上への移設・必須レイヤー(現在描画中レイヤー)の明示という4点の改善要望が寄せられた。
+
+**Decision**:
+- `.panel` に `data-collapsed` 属性とトグルボタン(`.panel__toggle`)を追加。クリックで折りたたみ/展開を切り替え、折りたたみ時は幅・高さをボタン分だけに縮小(2.75×2.75rem)。展開時は既存スタイル(max-width 22rem等)を使用。遷移エフェクト(`transition: width/height 0.2s ease`)で見た目を滑らかに。
+- `#legend` の独立した `<details>` 要素を削除し、`.legend-section`(div)として `.panel__content` の内部に統合。`renderLegend()` の既存ロジック(表示中レイヤーのみ表示、`data-has-entries` による空時非表示)はそのまま流用、DOM参照先のみ変更。
+- Layer Control を `bottom-left` から `top-right` に移設。`top-right` に既存の NavigationControl・TerrainControl と並ぶ形で配置。
+- `.panel` に「表示中のレイヤー」セクションを新設し、必須レイヤー一覧(読み取り専用のラベル、チェックボックス無し)を「任意レイヤー」の上に表示。ユーザーは現在の構成を一目で把握可能。
+- `.panel__content` に `max-height: calc(100vh - 2rem); overflow-y: auto;` でコンテンツ増加時の縦スクロール対応。
+
+**Consequences**: `.panel` の折りたたみ状態管理がクライアント側の DOM 属性(JavaScript で制御)となるため、Map Intent に含まれず、再読み込み時は初期状態(展開)に戻る。この挙動は、faceless 原則(URL が状態を持たない)と整合。ペーン操作のUIが左コーナーに集約され、マップ表示面積が最小化時に広がる。
 
 ## バックログ(未決定・保留)
 

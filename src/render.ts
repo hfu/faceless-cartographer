@@ -197,7 +197,12 @@ export function renderMapView(
       ${missingNotice}
       ${unrenderableNotice}
       ${urlShareNotice}
-      ${resolved.length > 0 ? `<div class="layers">${allLayerCheckboxes}</div>` : ''}
+      ${resolved.length > 0 ? `
+      <div class="layer-search-wrapper" style="margin: .5rem 0;">
+        <input type="text" id="layer-search" placeholder="🔍 Search layers..." class="dads-text-input" style="width: 100%; font-size: 0.88rem; padding: 0.4rem 0.6rem; border: 1px solid rgba(0, 0, 0, 0.2); border-radius: var(--border-radius-4);">
+      </div>
+      <div class="layers">${allLayerCheckboxes}</div>
+      ` : ''}
       <div class="url-reflection-control" style="margin: .5rem 0; font-size: 0.82rem;">
         <label class="dads-checkbox" data-size="sm">
           <span class="dads-checkbox__checkbox">
@@ -316,6 +321,25 @@ export function renderMapView(
       updateFragment();
     });
   });
+
+  // Layer search/filter: real-time filtering of layer list
+  const searchInput = container.querySelector<HTMLInputElement>('#layer-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const searchText = searchInput.value.toLowerCase().trim();
+      const layerItems = container.querySelectorAll<HTMLElement>('.layer-item');
+
+      layerItems.forEach((item) => {
+        // Get the layer label from the checkbox label text
+        const labelElement = item.querySelector('.dads-checkbox__label');
+        const layerLabel = labelElement?.textContent?.toLowerCase() ?? '';
+
+        // Show if search is empty or label matches
+        const matches = !searchText || layerLabel.includes(searchText);
+        item.style.display = matches ? '' : 'none';
+      });
+    });
+  }
 
   map.on('moveend', () => {
     updateFragment();

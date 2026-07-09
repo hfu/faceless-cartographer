@@ -451,7 +451,7 @@ Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクト
 - 地図描画後の画面に「Copy Shareable Link」ボタンを追加(`src/render.ts`、既存の「Copy Map Intent」ボタンの隣)。クリップボードにコピーされるのは `${location.origin}${location.pathname}#intent=${encodeIntentFragment(...)}` という完全なURLで、既存の「Copy Map Intent」ボタンと同じrender_hints/cartographer_feedback反映ロジック(D11/D15、`buildCurrentIntentYaml()` として共通化)を共有する。
 - `sharing_policy.url_share` に関する既存の通知文言を、「永続的なクエリ文字列状態は引き続き未サポート」と「一回限りのフラグメント受け渡しはサポート」を区別する文言に更新した。
 
-D18の際と同様、この逸脱を実装するだけでなく、spec側の文言を明確化する提案を `UNopenGIS/staccato-spec` へPRとして提出することを検討している(D18の `UNopenGIS/staccato-spec#1` に倣う。本エントリ執筆時点ではドラフトのみで、PRは未提出)。
+D18の際と同様、この逸脱を実装するだけでなく、spec側の文言を明確化する提案を `UNopenGIS/staccato-spec` へPRとして提出した(D18/ADR 0003の前例に倣い、ADR 0001を直接書き換えず新規の追記型ADRとする形: [UNopenGIS/staccato-spec#2](https://github.com/UNopenGIS/staccato-spec/pull/2)、ADR 0004として提案)。
 
 **Consequences**: `src/fragment.ts`(新規、純粋関数、`src/fragment.test.ts` でユニットテスト)を追加。`src/main.ts` はページ読み込み時の分岐ロジックが増える(`showForm()` の無条件呼び出しから、hash判定付きの `bootstrap()` に変更)。`src/render.ts` に「Copy Shareable Link」ボタンとそのハンドラを追加。`main.ts`/`render.ts` は本プロジェクトの既存の慣習通りユニットテスト対象外(手動/ヘッドレスブラウザで検証)。URLフラグメントは(hashそのものの性質上)ブラウザ履歴・ローカルのブラウザ拡張・端末上のクリップボード履歴等には残り得るため、「サーバーに送信されない」以上の秘匿性は保証しない ―― この点は共有前提のMap Intent自体の性質(意図的に人間が読める平文であり、秘密情報を含まない設計、D2/D12)と整合している。
 

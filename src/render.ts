@@ -232,7 +232,7 @@ export function renderMapView(
       .map((layer) => layer.id as string);
 
     const layerControl = new LayerControl({
-      collapsed: false,
+      collapsed: true,
       layers: thematicLayerIds
     });
     map.addControl(layerControl, 'bottom-left');

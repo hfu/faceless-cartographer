@@ -40,6 +40,7 @@
 | [D32](#d32-map-intentを-url-フラグメントで一回限り受け渡しする-issue-3) | Map Intentを URL フラグメントで一回限り受け渡しする(Issue #3) | Accepted | 2026-07-09 |
 | [D33](#d33-ui-整理-左パネルの折りたたみ化凡例統合レイヤーコントロール移設表示中レイヤー明示) | UI 整理：左パネルの折りたたみ化、凡例統合、レイヤーコントロール移設、表示中レイヤー明示 | Accepted | 2026-07-10 |
 | [D34](#d34-url-フラグメント反映を-intent-の-sharing_policy-で制御しセッション単位でトグル化) | URL フラグメント反映を intent の `sharing_policy` で制御し、セッション単位でトグル化 | Accepted | 2026-07-10 |
+| [D35](#d35-copy-shareable-link-ボタンの廃止--idempotent-cartographer-の実装) | 「Copy Shareable Link」ボタンの廃止 ―― idempotent Cartographer の実装 | Accepted | 2026-07-10 |
 
 ---
 

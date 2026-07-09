@@ -160,7 +160,7 @@ export function renderMapView(
           .join(', ')}(vector_layers が catalog 側に無く、描画に必要なスタイル情報を復元できません)</div>`
       : '';
   const urlShareNotice = urlShareWarning
-    ? `<div class="notice">この Map Intent は <code>sharing_policy.url_share: true</code> を指定していますが、この Cartographer では URL のクエリ文字列やパスに地図の状態を保持する仕組み(ブックマーク可能な永続的URL共有)はサポートされません(faceless構成、ADR 0001)。共有には「Copy Map Intent」ボタン、または「Copy Shareable Link」ボタンが生成する一回限りのフラグメント付きURL(<code>#intent=...</code>、読み込み直後に消去されブックマークとして残らない)をご利用ください。</div>`
+    ? `<div class="notice">この Map Intent は <code>sharing_policy.url_share: true</code> を指定しています。「URLに地図の状態を反映」をONにすると、パネル上部のチェックボックスでアドレスバーから URL をコピーして共有できます。URL のクエリ文字列やパスに状態を保持する仕組み(ブックマーク可能な永続的URL共有)はサポートされません(faceless構成、ADR 0001)。</div>`
     : '';
 
   // All layers (required and optional) displayed uniformly with checkboxes
@@ -208,7 +208,6 @@ export function renderMapView(
       </div>
       <div class="actions">
         <button id="copy-intent" type="button" class="dads-button" data-type="solid-fill" data-size="md">Copy Map Intent</button>
-        <button id="copy-share-link" type="button" class="dads-button" data-type="outline" data-size="md">Copy Shareable Link</button>
         <button id="back-button" type="button" class="dads-button" data-type="outline" data-size="md">戻る</button>
       </div>
     </div>
@@ -385,21 +384,6 @@ export function renderMapView(
     copyButton.textContent = 'Copied!';
     setTimeout(() => {
       copyButton.textContent = label;
-    }, 1500);
-  });
-
-  // D32: a one-shot URL fragment hand-off, never sent to the server (unlike
-  // a query string) and cleared on load before rendering -- see main.ts's
-  // bootstrap(). Not a persistent/bookmarkable URL-state mechanism.
-  const copyLinkButton = container.querySelector<HTMLButtonElement>('#copy-share-link')!;
-  copyLinkButton.addEventListener('click', async () => {
-    const yaml = buildCurrentIntentYaml();
-    const url = `${location.origin}${location.pathname}#intent=${encodeIntentFragment(yaml)}`;
-    await navigator.clipboard.writeText(url);
-    const label = copyLinkButton.textContent;
-    copyLinkButton.textContent = 'Copied!';
-    setTimeout(() => {
-      copyLinkButton.textContent = label;
     }, 1500);
   });
 

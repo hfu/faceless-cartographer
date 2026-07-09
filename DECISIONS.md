@@ -501,6 +501,26 @@ URL fragment 自体の性質(ブラウザ内部のメモリのみ)により、re
 
 この設計を staccato-spec に反映するため、新規 ADR を提案した: [UNopenGIS/staccato-spec ADR 0005](https://github.com/UNopenGIS/staccato-spec/blob/main/spec/adr/0005-session-controlled-fragment-reflection.md)。D34 の実装と論理はこれを例証として引用される。
 
+## D35: 「Copy Shareable Link」ボタンの廃止 ―― idempotent Cartographer の実装
+
+**Status**: Accepted
+
+**Context**: D34 で「URLに地図の状態を反映」チェックボックスを実装し、ユーザーがセッション内で URL フラグメント反映を ON/OFF できるようになった。一方、UI には「Copy Shareable Link」ボタンがあり、クリックすると URL をクリップボードにコピーしていた。
+
+しかし、チェックボックスが ON のとき、ブラウザのアドレスバーには自動的にフラグメント付き URL が表示される。つまり、ユーザーはアドレスバーから直接 URL をコピーできるようになり、「Copy Shareable Link」ボタンの役割は重複している。
+
+特にモバイル (375px) では画面スペースが限られており、不要なボタンを削減することで UI がより安定する。
+
+**Decision**:
+- 「Copy Shareable Link」ボタンを完全廃止。
+- ユーザーは「URLに地図の状態を反映」をONにして、ブラウザのアドレスバーから URL をコピーして共有する。
+- パネルの通知文を更新し、この方法を明記する。
+
+**Consequences**:
+- ボタン数削減によりモバイルレイアウトがより安定、sticky footer の効果が向上。
+- UI が faceless 原則に一層適合（ユーザーが主動的に URL をコピーする、ボタン経由ではなく）。
+- ユーザーにはアドレスバーコピーの操作が必要（ボタンクリックより手数多い）。
+
 ## バックログ(未決定・保留)
 
 ### 凡例(legend)が画面上で分からない(解消: D14 + layers-martin D18)

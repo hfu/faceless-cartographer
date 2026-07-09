@@ -36,6 +36,7 @@
 | [D28](#d28-デフォルト-map-intent-を札幌の地形分類に更新しハイブリッド対応-staff_prompt-を実装テスト) | デフォルト Map Intent を札幌の地形分類に更新し、ハイブリッド対応 STAFF_PROMPT を実装テスト | Accepted | 2026-07-09 |
 | [D29](#d29-vector-fill-layer-で-hillshade-を透視するため-blend-mode-を導入) | Vector fill layer で hillshade を透視するため blend-mode を導入 | Accepted | 2026-07-09 |
 | [D30](#d30-maplibre-gl-layer-control-による-レイヤーパネル統合) | maplibre-gl-layer-control によるレイヤーパネル統合 | Accepted | 2026-07-09 |
+| [D31](#d31-mapterhorn-ソースの-maxzoom-14-固定を撤廃する) | Mapterhorn ソースの `maxzoom: 14` 固定を撤廃する | Accepted | 2026-07-09 |
 
 ---
 
@@ -424,6 +425,16 @@ Raspberry Pi + cloudflared によるデプロイ一式(`deploy/` ディレクト
 - Layer order change の実装（ドラッグ可能化）
 - Multi-layer visibility control（sub-layer toggle時に全て連動）
 - Background/補助要素 group の disable 設定
+
+## D31: Mapterhorn ソースの `maxzoom: 14` 固定を撤廃する
+
+**Status**: Accepted
+
+**Context**: [Issue #2](https://github.com/hfu/faceless-cartographer/issues/2) にて、D24 で `hfu/kitavolca` から vendoring した `src/base-style.json` の mapterhorn ソースに設定されていた `maxzoom: 14`(高ズームでの404対応のため)が妥当でないと指摘。地域によっては z=16 の terrarium タイルが実際に提供されており(例: `https://tiles.mapterhorn.com/16/56409/26447.webp`)、一律 z14 に切り詰めるとその地域の高解像度地形を損なう。Mapterhorn 公式の `https://tiles.mapterhorn.com/tilejson.json` 自体も `maxzoom` を指定していない。
+
+**Decision**: `src/base-style.json` の `mapterhorn` raster-dem ソース定義から `"maxzoom": 14` を削除し、upstream の `tilejson.json` と同様にズーム上限を指定しない状態にする。D24 のエントリ自体は当時の判断記録として変更せず残す。
+
+**Consequences**: z16 タイルが提供されている地域ではより高解像度な地形陰影・3D地形が描画される。タイルが存在しない地域・ズームでは個別のタイルリクエストが404になり得るが、MapLibre 側は該当タイルを描画しないだけで致命的な問題にはならない。
 
 ## バックログ(未決定・保留)
 

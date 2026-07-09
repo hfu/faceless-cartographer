@@ -28,18 +28,24 @@
   /* Map view */
   .map-view { position: fixed; inset: 0; }
   #map { position: absolute; inset: 0; }
+  /* Flush against the top-left corner (no outer margin) so the panel can
+     use the full viewport height; only the bottom-right corner is rounded.
+     Flex column + max-height:100vh keeps the actions row reachable: the
+     content area scrolls, everything else (toggle, padding) stays inside
+     the viewport instead of overflowing past its bottom edge. */
   .panel {
-    position: absolute; top: 1rem; left: 1rem; max-width: 22rem;
-    background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border-radius: var(--border-radius-12); box-shadow: var(--elevation-1);
+    position: absolute; top: 0; left: 0; max-width: 22rem; max-height: 100vh;
+    display: flex; flex-direction: column;
+    background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-radius: 0 0 var(--border-radius-12) 0; box-shadow: var(--elevation-1);
     z-index: 10; line-height: 1.45; font-size: 0.88rem;
     transition: width 0.2s ease, height 0.2s ease;
   }
   .panel[data-collapsed="false"] { padding: .9rem 1rem; }
   .panel[data-collapsed="true"] { width: 2.75rem; height: 2.75rem; padding: .4rem; overflow: hidden; }
-  .panel__toggle { background: transparent; border: none; cursor: pointer; padding: 0.2rem; color: currentColor; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1; }
+  .panel__toggle { flex: none; align-self: flex-start; background: transparent; border: none; cursor: pointer; padding: 0.2rem; color: currentColor; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1; }
   .panel[data-collapsed="true"] .panel__toggle svg { transform: scaleX(-1); }
-  .panel__content { max-height: calc(100vh - 2rem); overflow-y: auto; display: block; }
+  .panel__content { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
   .panel[data-collapsed="true"] .panel__content { display: none; }
   .panel h1 { font-size: 1rem; margin: 0 0 .4rem; }
   .panel .layers { margin: .5rem 0; }

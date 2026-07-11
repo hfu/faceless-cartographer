@@ -147,7 +147,7 @@ export function renderMapView(
     onBack: () => void;
   }
 ): void {
-  const { rawIntent, intent, view, style, resolved, missing, unrenderable, urlShareWarning, onBack } = opts;
+  const { rawIntent, intent, view, style, resolved, missing, unrenderable, onBack } = opts;
 
   const missingNotice =
     missing.length > 0

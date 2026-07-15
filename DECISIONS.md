@@ -553,6 +553,10 @@ Negative / trade-offs:
 - **学習コスト**: 従来の「faceless Cartographer」という単一の語から、「faceless mode と idempotent mode」という2値の選択肢へと概念が拡張される。ドキュメントや STAFF_PROMPT では両モードの使い分けを明記する必要がある。
 - **セッションスコープの認知**: ON した state が reload で消えることが「不便」と感じるユーザーもいるだろう。しかし persistent storage (localStorage等) への保存は、faceless baseline の意図に反し、ユーザーが無自覚に URL state を蓄積させてしまう懸念がある。
 
+**Normative Basis**:
+
+この設計は [UNopenGIS/staccato-spec ADR 0006](https://github.com/UNopenGIS/staccato-spec/pull/3) として spec 側に提案され、実装パターンのガイダンスとして記録される予定。D36 はその実装例・proof of concept として位置付けられる。
+
 ## バックログ(未決定・保留)
 
 ### 凡例(legend)が画面上で分からない(解消: D14 + layers-martin D18)

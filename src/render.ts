@@ -79,15 +79,15 @@ export function renderFormView(
 <div class="form-view">
   <div class="wrap">
     <div class="card">
-      <h1>faceless-cartographer</h1>
-      <p>Map Intent (YAML) を貼り付けて送信してください。URL には状態を持たせません。</p>
-      ${errorBlock}
-      <form id="intent-form">
-        <textarea name="map_intent" rows="22">${value}</textarea>
-        <p><button type="submit" class="dads-button" data-type="solid-fill" data-size="md">Render</button></p>
-      </form>
+      <h1>AI Map</h1>
+      <p>Make a map with your AI. Three steps: Prompt, Ask, Paste.</p>
     </div>
     <div class="card">
+      <div class="step-header">
+        <button id="copy-staff-prompt" type="button" class="dads-button" data-type="outline" data-size="sm">Copy</button>
+        <h2 class="card-step">1. Prompt your AI</h2>
+      </div>
+      <p>Copy this prompt and give it to your AI (for example, Claude or ChatGPT). It teaches your AI to write a Map Intent.</p>
       <details class="dads-disclosure">
         <summary class="dads-disclosure__summary">
           <svg class="dads-disclosure__icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
@@ -95,14 +95,30 @@ export function renderFormView(
             <circle class="dads-disclosure__icon-circle" cx="12" cy="12" r="8" fill="currentcolor"/>
             <path class="dads-disclosure__icon-triangle" d="M17 10H7L12 15L17 10Z" fill="Canvas"/>
           </svg>
-          現在の Staff プロンプト
+          See the prompt
         </summary>
         <div class="dads-disclosure__content">
-          <p style="font-size:0.82rem;color:#555;">このCartographerと組み合わせて使う Staff エージェントのシステムプロンプトに、そのまま追加できる内容です。取得元: <a href="https://github.com/hfu/layers-martin/blob/main/STAFF_PROMPT.md" target="_blank" rel="noreferrer">hfu/layers-martin STAFF_PROMPT.md</a></p>
-          <p><button id="copy-staff-prompt" type="button" class="dads-button" data-type="outline" data-size="md">Copy Staff Prompt</button></p>
+          <p style="font-size:0.82rem;color:#555;">Prompt source: <a href="https://github.com/hfu/layers-martin/blob/main/STAFF_PROMPT.md" target="_blank" rel="noreferrer">hfu/layers-martin STAFF_PROMPT.md</a></p>
           <pre>${staffPrompt}</pre>
         </div>
       </details>
+    </div>
+    <div class="card">
+      <h2 class="card-step">2. Ask your AI</h2>
+      <p>Now ask your AI a map question. For example:</p>
+      <div class="sample">
+        <p>I want to explore flood control of the Ishikari River.</p>
+        <p>石狩川の治水について考えたい。</p>
+      </div>
+    </div>
+    <div class="card">
+      <h2 class="card-step">3. Paste</h2>
+      <p>Paste Map Intent.</p>
+      ${errorBlock}
+      <form id="intent-form">
+        <textarea name="map_intent" rows="22">${value}</textarea>
+        <p><button type="submit" class="dads-button" data-type="solid-fill" data-size="md">Render</button></p>
+      </form>
     </div>
   </div>
 </div>`;
@@ -190,7 +206,7 @@ export function renderMapView(
       </svg>
     </button>
     <div class="panel__content">
-      <h1>faceless-cartographer</h1>
+      <h1>AI Map</h1>
       <p>${escapeHtml(intent.goal)}</p>
       ${missingNotice}
       ${unrenderableNotice}
@@ -210,8 +226,8 @@ export function renderMapView(
         </label>
       </div>
       <div class="actions">
-        <button id="copy-intent" type="button" class="dads-button" data-type="solid-fill" data-size="md">Copy Map Intent</button>
-        <button id="back-button" type="button" class="dads-button" data-type="outline" data-size="md">戻る</button>
+        <button id="copy-intent" type="button" class="dads-button" data-type="solid-fill" data-size="md">Copy Intent</button>
+        <button id="back-button" type="button" class="dads-button" data-type="outline" data-size="md">Back</button>
       </div>
     </div>
   </div>

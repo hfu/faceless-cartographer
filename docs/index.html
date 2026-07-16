@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>faceless-cartographer</title>
+<title>AI Map</title>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
 <link rel="stylesheet" href="https://unpkg.com/@digital-go-jp/design-tokens@2.0.1/dist/tokens.css">
 <style>
@@ -22,6 +22,10 @@
   .form-view .wrap { max-width: 42rem; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; }
   .card { background: rgba(255, 255, 255, 0.92); border-radius: var(--border-radius-12); box-shadow: var(--elevation-1); padding: 1.25rem 1.5rem; }
   .card h1 { font-size: 1.15rem; margin: 0 0 .3rem; }
+  .card-step { font-size: 1.05rem; margin: 0; }
+  .step-header { display: flex; align-items: center; gap: .5rem; margin: 0 0 .4rem; }
+  .sample { font-family: var(--font-family-mono); font-size: .85rem; background: rgba(0,0,0,0.04); border-radius: var(--border-radius-8); padding: .6rem .75rem; }
+  .sample p { margin: .15rem 0; }
   textarea { width: 100%; box-sizing: border-box; font-family: var(--font-family-mono); font-size: 0.82rem; border-radius: var(--border-radius-8); border: 1px solid var(--color-neutral-solid-gray-300); padding: .6rem; }
   pre { white-space: pre-wrap; font-family: var(--font-family-mono); font-size: 0.78rem; max-height: 24rem; overflow-y: auto; background: rgba(0,0,0,0.04); border-radius: var(--border-radius-8); padding: .75rem; margin: 0; }
 
@@ -973,15 +977,15 @@ provenance:
 <div class="form-view">
   <div class="wrap">
     <div class="card">
-      <h1>faceless-cartographer</h1>
-      <p>Map Intent (YAML) を貼り付けて送信してください。URL には状態を持たせません。</p>
-      ${r}
-      <form id="intent-form">
-        <textarea name="map_intent" rows="22">${n}</textarea>
-        <p><button type="submit" class="dads-button" data-type="solid-fill" data-size="md">Render</button></p>
-      </form>
+      <h1>AI Map</h1>
+      <p>Make a map with your AI. Three steps: Prompt, Ask, Paste.</p>
     </div>
     <div class="card">
+      <div class="step-header">
+        <button id="copy-staff-prompt" type="button" class="dads-button" data-type="outline" data-size="sm">Copy</button>
+        <h2 class="card-step">1. Prompt your AI</h2>
+      </div>
+      <p>Copy this prompt and give it to your AI (for example, Claude or ChatGPT). It teaches your AI to write a Map Intent.</p>
       <details class="dads-disclosure">
         <summary class="dads-disclosure__summary">
           <svg class="dads-disclosure__icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
@@ -989,14 +993,30 @@ provenance:
             <circle class="dads-disclosure__icon-circle" cx="12" cy="12" r="8" fill="currentcolor"/>
             <path class="dads-disclosure__icon-triangle" d="M17 10H7L12 15L17 10Z" fill="Canvas"/>
           </svg>
-          現在の Staff プロンプト
+          See the prompt
         </summary>
         <div class="dads-disclosure__content">
-          <p style="font-size:0.82rem;color:#555;">このCartographerと組み合わせて使う Staff エージェントのシステムプロンプトに、そのまま追加できる内容です。取得元: <a href="https://github.com/hfu/layers-martin/blob/main/STAFF_PROMPT.md" target="_blank" rel="noreferrer">hfu/layers-martin STAFF_PROMPT.md</a></p>
-          <p><button id="copy-staff-prompt" type="button" class="dads-button" data-type="outline" data-size="md">Copy Staff Prompt</button></p>
+          <p style="font-size:0.82rem;color:#555;">Prompt source: <a href="https://github.com/hfu/layers-martin/blob/main/STAFF_PROMPT.md" target="_blank" rel="noreferrer">hfu/layers-martin STAFF_PROMPT.md</a></p>
           <pre>${na(i)}</pre>
         </div>
       </details>
+    </div>
+    <div class="card">
+      <h2 class="card-step">2. Ask your AI</h2>
+      <p>Now ask your AI a map question. For example:</p>
+      <div class="sample">
+        <p>I want to explore flood control of the Ishikari River.</p>
+        <p>石狩川の治水について考えたい。</p>
+      </div>
+    </div>
+    <div class="card">
+      <h2 class="card-step">3. Paste</h2>
+      <p>Paste Map Intent.</p>
+      ${r}
+      <form id="intent-form">
+        <textarea name="map_intent" rows="22">${n}</textarea>
+        <p><button type="submit" class="dads-button" data-type="solid-fill" data-size="md">Render</button></p>
+      </form>
     </div>
   </div>
 </div>`;let a=e.querySelector(`#copy-staff-prompt`);a.addEventListener(`click`,async()=>{await navigator.clipboard.writeText(i);let e=a.textContent;a.textContent=`Copied!`,setTimeout(()=>{a.textContent=e},1500)});let o=e.querySelector(`#intent-form`);o.addEventListener(`submit`,e=>{e.preventDefault();let n=o.querySelector(`textarea[name=map_intent]`);t.onSubmit(n.value)})}function aa(e,t){let{rawIntent:n,intent:r,view:i,style:a,resolved:o,missing:s,unrenderable:c,onBack:l}=t,u=s.length>0?`<div class="notice"><strong>見つからないレイヤー(missing_layers)</strong>: ${s.map(na).join(`, `)}</div>`:``,d=c.length>0?`<div class="notice"><strong>ベクトルタイルのため描画をスキップしたレイヤー</strong>: ${c.map(na).join(`, `)}(vector_layers が catalog 側に無く、描画に必要なスタイル情報を復元できません)</div>`:``,f=o.map(e=>`<div class="layer-item">
@@ -1020,7 +1040,7 @@ provenance:
       </svg>
     </button>
     <div class="panel__content">
-      <h1>faceless-cartographer</h1>
+      <h1>AI Map</h1>
       <p>${na(r.goal)}</p>
       ${u}
       ${d}
@@ -1040,8 +1060,8 @@ provenance:
         </label>
       </div>
       <div class="actions">
-        <button id="copy-intent" type="button" class="dads-button" data-type="solid-fill" data-size="md">Copy Map Intent</button>
-        <button id="back-button" type="button" class="dads-button" data-type="outline" data-size="md">戻る</button>
+        <button id="copy-intent" type="button" class="dads-button" data-type="solid-fill" data-size="md">Copy Intent</button>
+        <button id="back-button" type="button" class="dads-button" data-type="outline" data-size="md">Back</button>
       </div>
     </div>
   </div>

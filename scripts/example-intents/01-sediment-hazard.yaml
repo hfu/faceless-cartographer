@@ -1,0 +1,24 @@
+spec_version: "map-intent/v2"
+goal: "札幌市の土砂災害警戒区域（土石流・地すべり・急傾斜地の崩壊）の分布を背景地形とともに示す。"
+area:
+  name: "札幌市"
+  bbox: [141.2, 42.95, 141.55, 43.15]
+catalog_context:
+  active_catalogs:
+    - id: "layers-martin"
+      type: "layers_txt"
+      uri: "https://hfu.github.io/layers-martin/catalog"
+required_layers:
+  - source_id: "05_dosekiryukeikaikuiki"
+    label: "土石流の警戒区域・特別警戒区域"
+  - source_id: "05_jisuberikeikaikuiki"
+    label: "地すべりの警戒区域・特別警戒区域"
+  - source_id: "05_kyukeishakeikaikuiki"
+    label: "急傾斜地の崩壊の警戒区域・特別警戒区域"
+optional_layers:
+  - source_id: "landslide"
+    label: "地すべり地形分布図"
+provenance:
+  generated_by: "example-intent"
+  generated_at: "2026-07-16T00:00:00Z"
+  intent_id: "baseline-q1"

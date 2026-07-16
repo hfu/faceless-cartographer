@@ -1,0 +1,20 @@
+spec_version: "map-intent/v2"
+goal: "石狩平野の洪水浸水想定区域（想定最大規模・計画規模）を示す。"
+area:
+  name: "石狩平野"
+  bbox: [141.25, 43.0, 141.85, 43.4]
+catalog_context:
+  active_catalogs:
+    - id: "layers-martin"
+      type: "layers_txt"
+      uri: "https://hfu.github.io/layers-martin/catalog"
+required_layers:
+  - source_id: "01_flood_l2_shinsuishin_data"
+    label: "洪水浸水想定区域（想定最大規模）"
+optional_layers:
+  - source_id: "01_flood_l1_shinsuishin_newlegend_data"
+    label: "洪水浸水想定区域（計画規模）"
+provenance:
+  generated_by: "example-intent"
+  generated_at: "2026-07-16T00:00:00Z"
+  intent_id: "iter1-q3"

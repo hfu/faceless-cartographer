@@ -1,0 +1,17 @@
+spec_version: "map-intent/v2"
+goal: "石狩平野の低地地形（旧河道・自然堤防・後背湿地など、土地条件に関わる地形）を治水地形分類図で示す。土地条件図（lcm25k）は当地域を整備対象外のため治水地形分類図で代替。"
+area:
+  name: "石狩平野"
+  bbox: [141.25, 43.0, 141.85, 43.4]
+catalog_context:
+  active_catalogs:
+    - id: "layers-martin"
+      type: "layers_txt"
+      uri: "https://hfu.github.io/layers-martin/catalog"
+required_layers:
+  - source_id: "lcmfc2"
+    label: "治水地形分類図（低地の地形分類）"
+provenance:
+  generated_by: "example-intent"
+  generated_at: "2026-07-16T00:00:00Z"
+  intent_id: "iter1-q4"

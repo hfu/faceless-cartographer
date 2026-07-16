@@ -1,0 +1,20 @@
+spec_version: "map-intent/v2"
+goal: "北海道（道央）の火山地質図を示す。"
+area:
+  name: "有珠山・洞爺湖周辺"
+  bbox: [140.6, 42.4, 141.1, 42.8]
+catalog_context:
+  active_catalogs:
+    - id: "layers-martin"
+      type: "layers_txt"
+      uri: "https://hfu.github.io/layers-martin/catalog"
+    - id: "stars-optgeo"
+      type: "martin"
+      uri: "https://stars.optgeo.org/catalog"
+required_layers:
+  - source_id: "vlcm"
+    label: "火山地質図"
+provenance:
+  generated_by: "example-intent"
+  generated_at: "2026-07-16T00:00:00Z"
+  intent_id: "baseline-q7"

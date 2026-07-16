@@ -18,6 +18,12 @@ function isVectorTileUrl(url: string): boolean {
   return /\.(pbf|mvt)(\?|$)/i.test(url);
 }
 
+// Opacity for a raster overlay that has another thematic layer stacked beneath
+// it, so the lower layer stays visible through it (see the raster occlusion
+// handling in buildStyle, D37). Below 1.0 enough to reveal the correspondence,
+// high enough to keep hazard/landform colors legible.
+const OVERLAY_RASTER_OPACITY = 0.7;
+
 // Generic paint for a vector source-layer whose actual geometry type isn't
 // known ahead of time (TileJSON's vector_layers doesn't declare it). Rather
 // than guess per layer name/schema (which would tie this code to one
@@ -140,11 +146,22 @@ export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { styl
       bounds: layer.tilejson.bounds,
       attribution: layer.tilejson.attribution
     };
+    // Occlusion control (raster analogue of the vector fills' translucency,
+    // D29/D37): an opaque raster overlay hides whatever thematic layer sits
+    // beneath it -- exactly the correspondence a "重ねて対応を見せる" intent
+    // wants visible (layers-martin STAFF_PROMPT D24). A raster that already has
+    // a thematic layer stacked below it is drawn semi-transparent; the
+    // bottom-most thematic raster (single-overlay / basemap-like use such as an
+    // aerial photo) stays fully opaque so it isn't washed out over the
+    // grayscale background. `relief` keeps its own dedicated value -- a
+    // full-coverage elevation tint meant to let the hillshade show through.
+    const rasterOpacity =
+      sourceId === 'relief' ? 0.6 : thematicLayers.length > 0 ? OVERLAY_RASTER_OPACITY : 1;
     thematicLayers.push({
       id: sourceId,
       type: 'raster',
       source: sourceId,
-      paint: sourceId === 'relief' ? { 'raster-opacity': 0.6 } : {},
+      paint: { 'raster-opacity': rasterOpacity },
       layout: { visibility: visible }
     });
   }

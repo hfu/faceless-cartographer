@@ -42,6 +42,7 @@
 | [D34](#d34-url-フラグメント反映を-intent-の-sharing_policy-で制御しセッション単位でトグル化) | URL フラグメント反映を intent の `sharing_policy` で制御し、セッション単位でトグル化 | Accepted | 2026-07-10 |
 | [D35](#d35-copy-shareable-link-ボタンの廃止--idempotent-cartographer-の実装) | 「Copy Shareable Link」ボタンの廃止 ―― idempotent Cartographer の実装 | Accepted | 2026-07-10 |
 | [D36](#d36-cartographer-の2つのモードfaceless-と-idempotent) | Cartographer の2つのモード（faceless と idempotent） | Accepted | 2026-07-10 |
+| [D37](#d37-複数ラスタオーバーレイの可読性のため下に主題があるラスタを半透明にする) | 複数ラスタ・オーバーレイの可読性のため、下に主題があるラスタを半透明にする | Accepted | 2026-07-17 |
 
 ---
 
@@ -556,6 +557,27 @@ Negative / trade-offs:
 **Normative Basis**:
 
 この設計は [UNopenGIS/staccato-spec ADR 0006](https://github.com/UNopenGIS/staccato-spec/pull/3) として spec 側に提案され、実装パターンのガイダンスとして記録される予定。D36 はその実装例・proof of concept として位置付けられる。
+
+## D37: 複数ラスタ・オーバーレイの可読性のため、下に主題があるラスタを半透明にする
+
+**Status**: Accepted
+
+**Context**: `layers-martin` STAFF_PROMPT.md の改善(同リポジトリ D24)で、Staff に「治水地形分類図 × 洪水浸水想定を重ねて**対応関係**を見せる」構成を推奨するようにした。ところが `style.ts` はラスタ主題レイヤーを既定で不透明に描画しており(`raster-opacity` を下げていたのは `relief` のみ)、上のラスタが下のラスタを覆い隠す。GSI のハザードタイルはデータの無い所は透明だが、**両者にデータがある低地(=まさに一番見たい重複域)では上の層が下を隠す**。ベクトルの塗りは D29 で `fill-opacity` + `blend-mode: multiply` により下・背景を透かせているが、ラスタにはその手当が無かった。
+
+MapLibre GL JS ではラスタに信頼できる blend-mode が使えないため、`raster-opacity` が現実的な梃子。
+
+**Decision**: ラスタ主題レイヤーの不透明度を、重ね合わせ位置に応じて決める(`style.ts` の `buildStyle` 内、`OVERLAY_RASTER_OPACITY = 0.7`)。
+
+- `relief` → 0.6(従来どおり。フルカバレッジの標高図を hillshade に透かす専用値)。
+- それ以外で**下に既に主題レイヤーが積まれている**(描画順で `thematicLayers.length > 0`)場合 → 0.7(下の主題を透かす)。
+- それ以外(最下=単体/基図的用途、例えば空中写真)→ 1.0(不透明のまま。グレー背景の上で白茶けさせない)。
+
+一律透過にしなかったのは、フルカバレッジのラスタを単体で見たい用途(空中写真など)が背景と混ざって白茶ける実害を避けるため。判定は宣言スタック基準の静的値で、トグルの表示状態には追従しない(決定的・faceless)。
+
+**Consequences**:
+- 「重ねて対応を見せる」intent で、上の洪水浸水想定を通して下の治水地形分類図・背景地形が見えるようになった。石狩川の例で、浸水域(紫, 0.7)の下に治水地形分類図(旧河道・後背湿地の配色)と hillshade が透けることをブラウザで確認(2026-07-17)。同じ描画で最下の治水地形分類図が不透明のままであることも確認でき、両分岐を実証。
+- 解決率・描画可能率(D24 のハーネス M2/M3)には無影響(opacity は解決性に無関係、6/6 維持)。
+- occlusion は自動指標化が難しく、検証は目視(M7)が中心。
 
 ## バックログ(未決定・保留)
 

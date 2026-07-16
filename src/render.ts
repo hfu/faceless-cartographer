@@ -7,10 +7,10 @@ import type { InitialView, MapLibreStyle } from './style.ts';
 import { encodeIntentFragment } from './fragment.ts';
 
 const EXAMPLE_MAP_INTENT = `spec_version: "map-intent/v2"
-goal: "対象地域における土砂災害警戒区域（土石流・地すべり・急傾斜地の崩壊）の分布を、背景地形とともに示す。"
+goal: "石狩川下流域（石狩平野）の治水を考えるため、治水地形分類図（旧河道・自然堤防・後背湿地などの地形）と洪水浸水想定区域を重ね、地形条件と想定される浸水範囲の関係を背景地形とともに示す。"
 area:
-  name: null
-  bbox: null
+  name: "石狩川下流域（石狩平野）"
+  bbox: [141.25, 43.0, 141.85, 43.4]
 catalog_context:
   active_catalogs:
     - id: "layers-martin"
@@ -18,24 +18,22 @@ catalog_context:
       uri: "https://hfu.github.io/layers-martin/catalog"
       version: "2026-07-09T00:00:00Z"
 required_layers:
-  - source_id: "05_dosekiryukeikaikuiki"
-    label: "土石流の警戒区域・特別警戒区域"
-  - source_id: "05_jisuberikeikaikuiki"
-    label: "地すべりの警戒区域・特別警戒区域"
-  - source_id: "05_kyukeishakeikaikuiki"
-    label: "急傾斜地の崩壊の警戒区域・特別警戒区域"
+  - source_id: "lcmfc2"
+    label: "治水地形分類図"
+  - source_id: "01_flood_l2_shinsuishin_data"
+    label: "洪水浸水想定区域（想定最大規模）"
 optional_layers:
-  - source_id: "landslide"
-    label: "地すべり地形分布図（防災科学技術研究所、現況の警戒区域とは別の地形学的観点の補助情報）"
+  - source_id: "01_flood_l1_shinsuishin_newlegend_data"
+    label: "洪水浸水想定区域（計画規模）"
 relationships_to_highlight:
-  - "警戒区域分布と背景地形(hillshade)の視覚的関係"
+  - "治水地形分類図が示す旧河道・後背湿地などの低地地形と、想定浸水範囲の対応関係"
 sharing_policy:
   url_share: true
   intent_share: true
 provenance:
   generated_by: "faceless-cartographer"
   generated_at: "2026-07-09T00:00:00Z"
-  intent_id: "example-disaster-zones"
+  intent_id: "example-ishikari-flood-control"
 `;
 
 function escapeHtml(value: string): string {

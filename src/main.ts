@@ -26,10 +26,6 @@ async function handleSubmit(rawIntent: string): Promise<void> {
   const { resolved, missing } = await resolveLayers(intent);
   const { style, unrenderable } = buildStyle(intent, resolved);
   const view = computeInitialView(intent, resolved);
-  // map-intent-vnext.md §6-5: sharing_policy.url_share SHOULD be false in
-  // faceless Cartographer deployments (this one always is -- ADR 0001). Not
-  // a MUST, so a non-compliant intent is still rendered; just flagged.
-  const urlShareWarning = intent.sharing_policy?.url_share === true;
 
   renderMapView(app!, {
     rawIntent,
@@ -39,7 +35,6 @@ async function handleSubmit(rawIntent: string): Promise<void> {
     resolved,
     missing,
     unrenderable,
-    urlShareWarning,
     onBack: () => showForm()
   });
 }

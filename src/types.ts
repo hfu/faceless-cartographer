@@ -91,6 +91,9 @@ export interface TileJson {
   // Extension key, not part of TileJSON 3.0 proper. See
   // hfu/layers-martin DECISIONS.md D18.
   legend_image_url?: string;
+  // Legend published only as a PDF (no inline image). See hfu/layers-martin
+  // D26 -- surfaced by the Cartographer as a "凡例 (PDF)" link, not an <img>.
+  legend_pdf_url?: string;
   [key: string]: unknown;
 }
 

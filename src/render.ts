@@ -45,6 +45,23 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+// Clipboard writes can reject (denied permission, non-secure context, etc).
+// Without handling that, the button silently does nothing and the user has
+// no idea the copy failed -- so success and failure both get a transient
+// label change back to the original text.
+async function copyToClipboard(button: HTMLButtonElement, text: string): Promise<void> {
+  const label = button.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    button.textContent = 'Copied!';
+  } catch {
+    button.textContent = 'Copy failed';
+  }
+  setTimeout(() => {
+    button.textContent = label;
+  }, 1500);
+}
+
 // staff-prompt.txt (fetched at build time, see scripts/fetch-staff-prompt.mjs)
 // is the full HANDOVER-style hfu/layers-martin STAFF_PROMPT.md document;
 // only the fenced ````text block is the actual prompt meant to be pasted
@@ -122,14 +139,7 @@ export function renderFormView(
 </div>`;
 
   const copyPromptButton = container.querySelector<HTMLButtonElement>('#copy-staff-prompt')!;
-  copyPromptButton.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(staffPromptRaw);
-    const label = copyPromptButton.textContent;
-    copyPromptButton.textContent = 'Copied!';
-    setTimeout(() => {
-      copyPromptButton.textContent = label;
-    }, 1500);
-  });
+  copyPromptButton.addEventListener('click', () => copyToClipboard(copyPromptButton, staffPromptRaw));
 
   const form = container.querySelector<HTMLFormElement>('#intent-form')!;
   form.addEventListener('submit', (e) => {
@@ -435,14 +445,7 @@ export function renderMapView(
   }
 
   const copyButton = container.querySelector<HTMLButtonElement>('#copy-intent')!;
-  copyButton.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(buildCurrentIntentYaml());
-    const label = copyButton.textContent;
-    copyButton.textContent = 'Copied!';
-    setTimeout(() => {
-      copyButton.textContent = label;
-    }, 1500);
-  });
+  copyButton.addEventListener('click', () => copyToClipboard(copyButton, buildCurrentIntentYaml()));
 
   const urlShareToggle = container.querySelector<HTMLInputElement>('#url-share-enable')!;
   urlShareToggle.checked = urlShareEnabled;

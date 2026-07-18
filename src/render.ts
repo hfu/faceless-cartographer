@@ -77,7 +77,7 @@ export function renderFormView(
 <div class="form-view">
   <div class="wrap">
     <div class="card">
-      <h1>AI Maps</h1>
+      <h1>AI Map</h1>
       <p>Make a map with your AI. Three steps: Prompt, Ask, Paste.</p>
     </div>
     <div class="card">
@@ -188,6 +188,9 @@ export function renderMapView(
           <div class="legend-item-inline" data-legend-for="${escapeHtml(r.source_id)}" style="display:none;margin-top:.3rem;">
             <img src="" alt="${escapeHtml(r.label ?? r.source_id)}" style="max-width:100%;display:block;">
           </div>
+          <div class="legend-pdf-inline" data-legend-pdf-for="${escapeHtml(r.source_id)}" style="display:none;margin-top:.3rem;">
+            <a href="" target="_blank" rel="noreferrer">凡例 (PDF)</a>
+          </div>
         </div>`
     )
     .join('\n');
@@ -202,7 +205,7 @@ export function renderMapView(
       </svg>
     </button>
     <div class="panel__content">
-      <h1>AI Maps</h1>
+      <h1>AI Map</h1>
       <p>${escapeHtml(intent.goal)}</p>
       ${missingNotice}
       ${unrenderableNotice}
@@ -276,27 +279,48 @@ export function renderMapView(
   const legendBySourceId = new Map(
     resolved.filter((r) => r.tilejson.legend_image_url).map((r) => [r.source_id, { url: r.tilejson.legend_image_url!, label: r.label ?? r.source_id }])
   );
+  // Some layers only publish a PDF legend (hfu/layers-martin D26). A PDF can't
+  // be shown inline as an image, so surface it as a "凡例 (PDF)" link instead --
+  // only when the layer has no inline image legend (an image is preferable).
+  const legendPdfBySourceId = new Map(
+    resolved
+      .filter((r) => r.tilejson.legend_pdf_url && !r.tilejson.legend_image_url)
+      .map((r) => [r.source_id, r.tilejson.legend_pdf_url!])
+  );
   const visibility = new Map<string, boolean>();
   legendBySourceId.forEach((_v, id) => visibility.set(id, false));
+  legendPdfBySourceId.forEach((_v, id) => visibility.set(id, false));
   resolved.filter((r) => r.required).forEach((r) => visibility.set(r.source_id, true));
 
   function updateLegendDisplay() {
     resolved.forEach((r) => {
-      const legendEl = container.querySelector<HTMLElement>(`[data-legend-for="${escapeHtml(r.source_id)}"]`);
-      if (!legendEl) return;
-
       const isVisible = visibility.get(r.source_id) ?? false;
-      const hasLegend = legendBySourceId.has(r.source_id);
 
-      if (isVisible && hasLegend) {
-        const entry = legendBySourceId.get(r.source_id)!;
-        legendEl.style.display = 'block';
-        const img = legendEl.querySelector('img') as HTMLImageElement;
-        img.src = entry.url;
-        img.alt = entry.label;
-        img.loading = 'lazy';
-      } else {
-        legendEl.style.display = 'none';
+      const legendEl = container.querySelector<HTMLElement>(`[data-legend-for="${escapeHtml(r.source_id)}"]`);
+      if (legendEl) {
+        const hasLegend = legendBySourceId.has(r.source_id);
+        if (isVisible && hasLegend) {
+          const entry = legendBySourceId.get(r.source_id)!;
+          legendEl.style.display = 'block';
+          const img = legendEl.querySelector('img') as HTMLImageElement;
+          img.src = entry.url;
+          img.alt = entry.label;
+          img.loading = 'lazy';
+        } else {
+          legendEl.style.display = 'none';
+        }
+      }
+
+      const pdfEl = container.querySelector<HTMLElement>(`[data-legend-pdf-for="${escapeHtml(r.source_id)}"]`);
+      if (pdfEl) {
+        const hasPdf = legendPdfBySourceId.has(r.source_id);
+        if (isVisible && hasPdf) {
+          pdfEl.style.display = 'block';
+          const a = pdfEl.querySelector('a') as HTMLAnchorElement;
+          a.href = legendPdfBySourceId.get(r.source_id)!;
+        } else {
+          pdfEl.style.display = 'none';
+        }
       }
     });
   }

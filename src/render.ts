@@ -77,7 +77,7 @@ export function renderFormView(
 <div class="form-view">
   <div class="wrap">
     <div class="card">
-      <h1>AI Map</h1>
+      <h1>AI Maps</h1>
       <p>Make a map with your AI. Three steps: Prompt, Ask, Paste.</p>
     </div>
     <div class="card">
@@ -205,7 +205,7 @@ export function renderMapView(
       </svg>
     </button>
     <div class="panel__content">
-      <h1>AI Map</h1>
+      <h1>AI Maps</h1>
       <p>${escapeHtml(intent.goal)}</p>
       ${missingNotice}
       ${unrenderableNotice}

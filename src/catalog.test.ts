@@ -140,26 +140,52 @@ function intentWithStyles(catalog: { id: string; type: string; uri: string }, re
 }
 
 describe('resolveStyles (integration, live stars.optgeo.org catalog)', () => {
-  // stars.optgeo.org's catalog currently publishes `"styles": {}` (empty) --
-  // styles.vlcm isn't live yet (that's server-side Martin config, out of
-  // scope for this repo, D39). GET /style/vlcm 404s with a plain-text "No
-  // such style exists" body today, so this exercises the real "reports
-  // missing, not an error" path end-to-end without depending on a style
-  // that hasn't been published server-side yet.
-  it('reports an unpublished style_id as missing rather than fabricating a result', async () => {
+  // styles.vlcm/styles.vbm are published on stars.optgeo.org (D39 follow-up,
+  // 2026-07-21): thematic-only extracts of hfu/kitavolca's docs/style.json
+  // (just the vlcm-*/vbm-* layers and their vlcm/vbm sources, deliberately
+  // excluding kitavolca's own bvmap/mapterhorn/seamlessphoto background --
+  // Cartographer already draws its own background per D24, so including
+  // kitavolca's background too would double-render it). Hosted at
+  // /home/stars/styles/{vlcm,vbm}.json on the Martin server, discovered via
+  // a `styles: {paths: [...]}` config entry, same auto-discovery mechanism
+  // already used for pmtiles.
+  it('resolves the real, live vlcm and vbm styles with correct shape', async () => {
     const intent = intentWithStyles({ id: 'stars-optgeo', type: 'martin', uri: 'https://stars.optgeo.org/catalog' }, [
-      'vlcm'
+      'vlcm',
+      'vbm'
     ]);
     const { resolved, missing } = await resolveStyles(intent);
 
-    expect(missing).toEqual(['vlcm']);
+    expect(missing).toEqual([]);
+    expect(resolved).toHaveLength(2);
+
+    const vlcm = resolved.find((r) => r.style_id === 'vlcm');
+    const vbm = resolved.find((r) => r.style_id === 'vbm');
+    expect(vlcm?.style.sources.vlcm).toBeDefined();
+    expect(vlcm?.style.layers.every((l) => (l.id as string).startsWith('vlcm-'))).toBe(true);
+    expect(vbm?.style.sources.vbm).toBeDefined();
+    expect(vbm?.style.layers.every((l) => (l.id as string).startsWith('vbm-'))).toBe(true);
+    // Neither extract carries kitavolca's own background sources -- those
+    // would double-render against Cartographer's D24 background.
+    expect(vlcm?.style.sources.bvmap).toBeUndefined();
+    expect(vbm?.style.sources.mapterhorn).toBeUndefined();
+  }, 20000);
+
+  it('reports a fabricated style_id as missing rather than fabricating a result', async () => {
+    const intent = intentWithStyles({ id: 'stars-optgeo', type: 'martin', uri: 'https://stars.optgeo.org/catalog' }, [
+      'this_style_id_does_not_exist_12345'
+    ]);
+    const { resolved, missing } = await resolveStyles(intent);
+
+    expect(missing).toEqual(['this_style_id_does_not_exist_12345']);
     expect(resolved).toEqual([]);
   }, 20000);
 
   // Confirms the narrower SUPPORTED_STYLE_CATALOG_TYPES gate: a layers_txt
   // catalog (hfu/layers-martin) has no "/style/{id}" endpoint at all (its
   // catalog document has no "styles" key whatsoever), so it must never even
-  // be attempted for style resolution.
+  // be attempted for style resolution -- even for a style_id ("vlcm") that
+  // really does exist on a different, martin-type catalog.
   it('never resolves a style against a layers_txt catalog', async () => {
     const intent = intentWithStyles(
       { id: 'layers-martin', type: 'layers_txt', uri: 'https://hfu.github.io/layers-martin/catalog' },

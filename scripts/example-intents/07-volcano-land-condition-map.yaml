@@ -1,0 +1,20 @@
+spec_version: "map-intent/v2"
+goal: "北海道（道央）の火山土地条件図を、地形とともに示す。"
+area:
+  name: "有珠山・洞爺湖周辺"
+  bbox: [140.6, 42.4, 141.1, 42.8]
+catalog_context:
+  active_catalogs:
+    - id: "stars-optgeo"
+      type: "martin"
+      uri: "https://stars.optgeo.org/catalog"
+required_styles:
+  - style_id: "vlcm"
+    label: "火山土地条件図"
+optional_styles:
+  - style_id: "vbm"
+    label: "火山基本図"
+provenance:
+  generated_by: "example-intent"
+  generated_at: "2026-07-21T00:00:00Z"
+  intent_id: "baseline-q7-styles"

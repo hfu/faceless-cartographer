@@ -10,11 +10,16 @@
 //
 // Metrics (see the project discussion in DECISIONS / STAFF_PROMPT iteration):
 //   M1 parse        schema-valid per parseMapIntent (mapIntent.ts)
-//   M2 resolution   resolved / (resolved + missing)   -- target 1.0
-//   M3 renderable   renderable / resolved             -- target 1.0
-//                   (a vector source with no vector_layers is unrenderable, D5/D23)
+//   M2 resolution   resolved / (resolved + missing), across BOTH required_layers/
+//                   optional_layers (source_id) and required_styles/optional_styles
+//                   (style_id, D39) -- target 1.0
+//   M3 renderable   renderable / resolved, same combined layers+styles pool -- target 1.0
+//                   (a vector source with no vector_layers is unrenderable, D5/D23;
+//                   a resolved style with no usable `layers` array is unrenderable, D39)
 //   M4 data_in_view fraction of resolved *raster* layers whose tile at the
 //                   area.bbox centre returns real (non-trivial) data
+//                   (styles aren't probed here -- they resolve/render as a unit,
+//                   D39 doesn't expose a per-style raster tile URL to sample)
 //   M5 framing      area.bbox present and well-formed
 //   M6 extra_keys   non-spec top-level keys (reported, not failed -- spec
 //                   tolerates unknown keys, but rendering-critical info in a
@@ -27,8 +32,8 @@
 import { readFileSync } from 'node:fs';
 import { load as yamlLoad } from 'js-yaml';
 import { parseMapIntent } from '../src/mapIntent.ts';
-import { resolveLayers } from '../src/catalog.ts';
-import type { MapIntent, ResolvedLayer } from '../src/types.ts';
+import { resolveLayers, resolveStyles } from '../src/catalog.ts';
+import type { MapIntent, ResolvedLayer, ResolvedStyle } from '../src/types.ts';
 
 const SPEC_TOP_LEVEL_KEYS = new Set([
   'spec_version',
@@ -37,11 +42,21 @@ const SPEC_TOP_LEVEL_KEYS = new Set([
   'catalog_context',
   'required_layers',
   'optional_layers',
+  'required_styles',
+  'optional_styles',
   'relationships_to_highlight',
   'render_hints',
   'sharing_policy',
   'provenance'
 ]);
+
+// A resolved style is renderable iff it has at least one usable layer --
+// mirrors buildStyle's own unrenderable check (style.ts, D39): an empty or
+// missing `layers` array means nothing to draw, even though the style_id
+// itself resolved.
+function isRenderableStyle(style: ResolvedStyle): boolean {
+  return Array.isArray(style.style.layers) && style.style.layers.length > 0;
+}
 
 // A resolved layer is unrenderable when it is a vector tile source (tiles URL
 // ends in .pbf/.mvt) that carries no vector_layers schema -- the Cartographer
@@ -164,13 +179,21 @@ async function evaluate(file: string): Promise<Scorecard> {
   const raw = (yamlLoad(yamlText) as Record<string, unknown>) ?? {};
   const extraKeys = Object.keys(raw).filter((k) => !SPEC_TOP_LEVEL_KEYS.has(k));
 
-  const { resolved, missing } = await resolveLayers(intent);
-  const total = resolved.length + missing.length;
-  const m2 = total > 0 ? resolved.length / total : 0;
+  const [{ resolved, missing }, { resolved: resolvedStyles, missing: missingStyles }] = await Promise.all([
+    resolveLayers(intent),
+    resolveStyles(intent)
+  ]);
+  const total = resolved.length + missing.length + resolvedStyles.length + missingStyles.length;
+  const m2 = total > 0 ? (resolved.length + resolvedStyles.length) / total : 0;
 
   const renderableLayers = resolved.filter(isRenderable);
-  const unrenderable = resolved.filter((l) => !isRenderable(l)).map((l) => l.source_id);
-  const m3 = resolved.length > 0 ? renderableLayers.length / resolved.length : 1;
+  const renderableStyles = resolvedStyles.filter(isRenderableStyle);
+  const unrenderable = [
+    ...resolved.filter((l) => !isRenderable(l)).map((l) => l.source_id),
+    ...resolvedStyles.filter((s) => !isRenderableStyle(s)).map((s) => s.style_id)
+  ];
+  const resolvedTotal = resolved.length + resolvedStyles.length;
+  const m3 = resolvedTotal > 0 ? (renderableLayers.length + renderableStyles.length) / resolvedTotal : 1;
 
   const center = bboxCenter(intent);
   let m4: string | null = null;
@@ -192,7 +215,7 @@ async function evaluate(file: string): Promise<Scorecard> {
     file,
     m1_parse: true,
     m2_resolution: m2,
-    missing,
+    missing: [...missing, ...missingStyles],
     m3_renderable: m3,
     unrenderable,
     m4_data: m4,

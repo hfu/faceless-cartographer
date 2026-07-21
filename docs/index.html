@@ -943,7 +943,7 @@ in vec3 view_direction;uniform vec3 u_sun_pos;uniform vec3 u_globe_position;unif
       <circle cx="11" cy="8" r="1.5"/>
       <circle cx="5" cy="13" r="1.5"/>
       <circle cx="11" cy="13" r="1.5"/>
-    </svg>`,e}startDrag(e,t){var n;let r=this.panel.querySelector(`[data-layer-id="${e}"]`);if(!r)return;let i=r.getBoundingClientRect();this.state.drag={active:!0,layerId:e,startY:t.clientY,currentY:t.clientY,placeholder:null,draggedElement:null},this.panel.classList.add(`dragging-active`),r.classList.add(`dragging`);let a=document.createElement(`div`);a.className=`layer-control-drop-placeholder`,a.style.height=`${i.height}px`,(n=r.parentNode)==null||n.insertBefore(a,r),this.state.drag.placeholder=a;let o=r.cloneNode(!0);o.classList.remove(`dragging`),o.className=`layer-control-item layer-control-item-dragging`,o.style.width=`${i.width}px`,o.style.left=`${i.left}px`,o.style.top=`${i.top}px`,document.body.appendChild(o),this.state.drag.draggedElement=o;let s=e=>this.onDragMove(e),c=e=>{document.removeEventListener(`pointermove`,s),document.removeEventListener(`pointerup`,c),document.removeEventListener(`pointercancel`,c),this.endDrag(e)};document.addEventListener(`pointermove`,s),document.addEventListener(`pointerup`,c),document.addEventListener(`pointercancel`,c)}onDragMove(e){var t,n;if(!this.state.drag.active||!this.state.drag.draggedElement)return;let r=this.state.drag.placeholder;if(!r)return;let i=e.clientY-this.state.drag.startY,a=this.state.drag.draggedElement,o=parseFloat(a.style.top)||0;a.style.top=`${o+i}px`,this.state.drag.startY=e.clientY,this.state.drag.currentY=e.clientY;let s=Array.from(this.panel.querySelectorAll(`.layer-control-item:not(.dragging)`)).filter(e=>e.dataset.layerId!==`Background`);for(let i of s){let a=i.getBoundingClientRect();if(e.clientY>=a.top&&e.clientY<=a.bottom){let o=a.top+a.height/2;e.clientY<o?r.nextSibling!==i&&((t=i.parentNode)==null||t.insertBefore(r,i)):r.previousSibling!==i&&((n=i.parentNode)==null||n.insertBefore(r,i.nextSibling));break}}}endDrag(e){var t;if(!this.state.drag.active)return;let n=this.state.drag.layerId,r=this.state.drag.placeholder,i=this.panel.querySelector(`[data-layer-id="${n}"]`);i&&r&&((t=r.parentNode)==null||t.insertBefore(i,r),i.classList.remove(`dragging`)),this.cleanupDragState(),this.applyUIOrderToMap()}cleanupDragState(){this.state.drag.draggedElement&&this.state.drag.draggedElement.remove(),this.state.drag.placeholder&&this.state.drag.placeholder.remove(),this.panel.classList.remove(`dragging-active`),this.panel.querySelectorAll(`.layer-control-item.dragging`).forEach(e=>{e.classList.remove(`dragging`)}),this.state.drag={active:!1,layerId:null,startY:0,currentY:0,placeholder:null,draggedElement:null}}applyUIOrderToMap(){var e;this.state.isStyleOperationInProgress=!0;let t=this.panel.querySelectorAll(`.layer-control-item`),n=[];t.forEach(e=>{let t=e.dataset.layerId;t&&t!==`Background`&&n.push(t)});let r=this.map.getStyle(),i=new Set((r?.layers)?.map(e=>e.id)||[]);for(let e=0;e<n.length;e++){let t=n[e];if(!i.has(t))continue;let r;for(let t=e-1;t>=0;t--)if(i.has(n[t])){r=n[t];break}try{this.map.moveLayer(t,r)}catch{}}(e=this.onLayerReorder)==null||e.call(this,n),setTimeout(()=>{this.state.isStyleOperationInProgress=!1},200)}},ra=`#intent=`;function ia(e){let t=new TextEncoder().encode(e),n=``;return t.forEach(e=>{n+=String.fromCharCode(e)}),btoa(n).replace(/\+/g,`-`).replace(/\//g,`_`).replace(/=+$/,``)}function aa(e){if(!e.startsWith(ra))return null;let t=e.slice(8);if(t===``)return null;try{let e=t.replace(/-/g,`+`).replace(/_/g,`/`),n=e+`=`.repeat((4-e.length%4)%4),r=atob(n),i=Uint8Array.from(r,e=>e.charCodeAt(0));return new TextDecoder().decode(i)}catch{return null}}var oa=`spec_version: "map-intent/v2"
+    </svg>`,e}startDrag(e,t){var n;let r=this.panel.querySelector(`[data-layer-id="${e}"]`);if(!r)return;let i=r.getBoundingClientRect();this.state.drag={active:!0,layerId:e,startY:t.clientY,currentY:t.clientY,placeholder:null,draggedElement:null},this.panel.classList.add(`dragging-active`),r.classList.add(`dragging`);let a=document.createElement(`div`);a.className=`layer-control-drop-placeholder`,a.style.height=`${i.height}px`,(n=r.parentNode)==null||n.insertBefore(a,r),this.state.drag.placeholder=a;let o=r.cloneNode(!0);o.classList.remove(`dragging`),o.className=`layer-control-item layer-control-item-dragging`,o.style.width=`${i.width}px`,o.style.left=`${i.left}px`,o.style.top=`${i.top}px`,document.body.appendChild(o),this.state.drag.draggedElement=o;let s=e=>this.onDragMove(e),c=e=>{document.removeEventListener(`pointermove`,s),document.removeEventListener(`pointerup`,c),document.removeEventListener(`pointercancel`,c),this.endDrag(e)};document.addEventListener(`pointermove`,s),document.addEventListener(`pointerup`,c),document.addEventListener(`pointercancel`,c)}onDragMove(e){var t,n;if(!this.state.drag.active||!this.state.drag.draggedElement)return;let r=this.state.drag.placeholder;if(!r)return;let i=e.clientY-this.state.drag.startY,a=this.state.drag.draggedElement,o=parseFloat(a.style.top)||0;a.style.top=`${o+i}px`,this.state.drag.startY=e.clientY,this.state.drag.currentY=e.clientY;let s=Array.from(this.panel.querySelectorAll(`.layer-control-item:not(.dragging)`)).filter(e=>e.dataset.layerId!==`Background`);for(let i of s){let a=i.getBoundingClientRect();if(e.clientY>=a.top&&e.clientY<=a.bottom){let o=a.top+a.height/2;e.clientY<o?r.nextSibling!==i&&((t=i.parentNode)==null||t.insertBefore(r,i)):r.previousSibling!==i&&((n=i.parentNode)==null||n.insertBefore(r,i.nextSibling));break}}}endDrag(e){var t;if(!this.state.drag.active)return;let n=this.state.drag.layerId,r=this.state.drag.placeholder,i=this.panel.querySelector(`[data-layer-id="${n}"]`);i&&r&&((t=r.parentNode)==null||t.insertBefore(i,r),i.classList.remove(`dragging`)),this.cleanupDragState(),this.applyUIOrderToMap()}cleanupDragState(){this.state.drag.draggedElement&&this.state.drag.draggedElement.remove(),this.state.drag.placeholder&&this.state.drag.placeholder.remove(),this.panel.classList.remove(`dragging-active`),this.panel.querySelectorAll(`.layer-control-item.dragging`).forEach(e=>{e.classList.remove(`dragging`)}),this.state.drag={active:!1,layerId:null,startY:0,currentY:0,placeholder:null,draggedElement:null}}applyUIOrderToMap(){var e;this.state.isStyleOperationInProgress=!0;let t=this.panel.querySelectorAll(`.layer-control-item`),n=[];t.forEach(e=>{let t=e.dataset.layerId;t&&t!==`Background`&&n.push(t)});let r=this.map.getStyle(),i=new Set((r?.layers)?.map(e=>e.id)||[]);for(let e=0;e<n.length;e++){let t=n[e];if(!i.has(t))continue;let r;for(let t=e-1;t>=0;t--)if(i.has(n[t])){r=n[t];break}try{this.map.moveLayer(t,r)}catch{}}(e=this.onLayerReorder)==null||e.call(this,n),setTimeout(()=>{this.state.isStyleOperationInProgress=!1},200)}},ra=`#intent=`;function ia(e){let t=new TextEncoder().encode(e),n=``;return t.forEach(e=>{n+=String.fromCharCode(e)}),btoa(n).replace(/\+/g,`-`).replace(/\//g,`_`).replace(/=+$/,``)}function aa(e){if(!e.startsWith(ra))return null;let t=e.slice(8);if(t===``)return null;try{let e=t.replace(/-/g,`+`).replace(/_/g,`/`),n=e+`=`.repeat((4-e.length%4)%4),r=atob(n),i=Uint8Array.from(r,e=>e.charCodeAt(0));return new TextDecoder().decode(i)}catch{return null}}var oa=[{id:`ishikari-flood-control`,menuLabel:`石狩川の治水（レイヤー構成）`,sampleQuestionEn:`I want to explore flood control of the Ishikari River.`,sampleQuestionJa:`石狩川の治水について考えたい。`,yaml:`spec_version: "map-intent/v2"
 goal: "石狩川下流域（石狩平野）の治水を考えるため、治水地形分類図（旧河道・自然堤防・後背湿地などの地形）と洪水浸水想定区域を重ね、地形条件と想定される浸水範囲の関係を背景地形とともに示す。"
 area:
   name: "石狩川下流域（石狩平野）"
@@ -971,7 +971,30 @@ provenance:
   generated_by: "faceless-cartographer"
   generated_at: "2026-07-09T00:00:00Z"
   intent_id: "example-ishikari-flood-control"
-`;function sa(e){return e.replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`)}async function ca(e,t){let n=e.textContent;try{await navigator.clipboard.writeText(t),e.textContent=`Copied!`}catch{e.textContent=`Copy failed`}setTimeout(()=>{e.textContent=n},1500)}function la(e){let t=e.match(/````text\n([\s\S]*?)\n````/);return(t?t[1]:e).trim()}function ua(e,t){let n=sa(t.prefill??oa),r=t.error?`<div class="notice error">${sa(t.error)}</div>`:``,i=la(t.staffPromptMarkdown);e.innerHTML=`
+`},{id:`volcano-land-condition-map`,menuLabel:`北海道の火山土地条件図（スタイル参照、D39）`,sampleQuestionEn:`I want to see the volcanic land condition map of Hokkaido.`,sampleQuestionJa:`北海道の火山土地条件図を見たい。`,yaml:`spec_version: "map-intent/v2"
+goal: "北海道（道央）の火山土地条件図を、地形とともに示す。"
+area:
+  name: "有珠山・洞爺湖周辺"
+  bbox: [140.6, 42.4, 141.1, 42.8]
+catalog_context:
+  active_catalogs:
+    - id: "stars-optgeo"
+      type: "martin"
+      uri: "https://stars.optgeo.org/catalog"
+required_styles:
+  - style_id: "vlcm"
+    label: "火山土地条件図"
+optional_styles:
+  - style_id: "vbm"
+    label: "火山基本図"
+sharing_policy:
+  url_share: true
+  intent_share: true
+provenance:
+  generated_by: "faceless-cartographer"
+  generated_at: "2026-07-21T00:00:00Z"
+  intent_id: "example-volcano-land-condition-map"
+`}];function sa(e){return e.replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`)}async function ca(e,t){let n=e.textContent;try{await navigator.clipboard.writeText(t),e.textContent=`Copied!`}catch{e.textContent=`Copy failed`}setTimeout(()=>{e.textContent=n},1500)}function la(e){let t=e.match(/````text\n([\s\S]*?)\n````/);return(t?t[1]:e).trim()}function ua(e,t){let n=sa(t.prefill??oa[0].yaml),r=t.error?`<div class="notice error">${sa(t.error)}</div>`:``,i=la(t.staffPromptMarkdown);e.innerHTML=`
 <div class="form-view">
   <div class="wrap">
     <div class="card">
@@ -1002,9 +1025,13 @@ provenance:
     <div class="card">
       <h2 class="card-step">2. Ask your AI</h2>
       <p>Now ask your AI a map question. For example:</p>
-      <div class="sample">
-        <p>I want to explore flood control of the Ishikari River.</p>
-        <p>石狩川の治水について考えたい。</p>
+      <select id="example-select" class="dads-text-input" style="width:100%;margin-bottom:.5rem;padding:0.4rem 0.6rem;">
+        ${oa.map(e=>`<option value="${sa(e.id)}">${sa(e.menuLabel)}</option>`).join(`
+`)}
+      </select>
+      <div class="sample" id="sample-question">
+        <p>${sa(oa[0].sampleQuestionEn)}</p>
+        <p>${sa(oa[0].sampleQuestionJa)}</p>
       </div>
     </div>
     <div class="card">
@@ -1017,7 +1044,7 @@ provenance:
       </form>
     </div>
   </div>
-</div>`;let a=e.querySelector(`#copy-staff-prompt`);a.addEventListener(`click`,()=>ca(a,i));let o=e.querySelector(`#intent-form`);o.addEventListener(`submit`,e=>{e.preventDefault();let n=o.querySelector(`textarea[name=map_intent]`);t.onSubmit(n.value)})}function da(e,t){let{rawIntent:n,intent:r,view:i,style:a,resolved:o,resolvedStyles:s,styleLayerIds:c,missing:l,unrenderable:u,onBack:d}=t,f=l.length>0?`<div class="notice"><strong>見つからないレイヤー/スタイル(missing_layers)</strong>: ${l.map(sa).join(`, `)}</div>`:``,p=u.length>0?`<div class="notice"><strong>描画をスキップしたレイヤー/スタイル</strong>: ${u.map(sa).join(`, `)}(vector_layers が catalog 側に無い、またはスタイルに描画可能な layers が無いため、描画に必要な情報を復元できません)</div>`:``,m=o.map(e=>`<div class="layer-item">
+</div>`;let a=e.querySelector(`#copy-staff-prompt`);a.addEventListener(`click`,()=>ca(a,i));let o=e.querySelector(`#intent-form`),s=o.querySelector(`textarea[name=map_intent]`),c=e.querySelector(`#example-select`),l=e.querySelector(`#sample-question`);c.addEventListener(`change`,()=>{let e=oa.find(e=>e.id===c.value)??oa[0];l.innerHTML=`<p>${sa(e.sampleQuestionEn)}</p><p>${sa(e.sampleQuestionJa)}</p>`,s.value=e.yaml}),o.addEventListener(`submit`,e=>{e.preventDefault(),t.onSubmit(s.value)})}function da(e,t){let{rawIntent:n,intent:r,view:i,style:a,resolved:o,resolvedStyles:s,styleLayerIds:c,missing:l,unrenderable:u,onBack:d}=t,f=l.length>0?`<div class="notice"><strong>見つからないレイヤー/スタイル(missing_layers)</strong>: ${l.map(sa).join(`, `)}</div>`:``,p=u.length>0?`<div class="notice"><strong>描画をスキップしたレイヤー/スタイル</strong>: ${u.map(sa).join(`, `)}(vector_layers が catalog 側に無い、またはスタイルに描画可能な layers が無いため、描画に必要な情報を復元できません)</div>`:``,m=o.map(e=>`<div class="layer-item">
           <label class="dads-checkbox" data-size="sm">
             <span class="dads-checkbox__checkbox">
               <input class="dads-checkbox__input" type="checkbox" data-layer-toggle="${sa(e.source_id)}"${e.required?` checked`:``}>

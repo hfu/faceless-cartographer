@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { resolveLayers } from './catalog.ts';
+import { resolveLayers, resolveStyles } from './catalog.ts';
 import type { MapIntent } from './types.ts';
 
 // These hit the real hfu/layers-martin catalog over the network, by design --
@@ -124,5 +124,100 @@ describe('resolveLayers (permissive input, mocked catalog)', () => {
 
     expect(resolved).toEqual([]);
     expect(missing).toEqual(['no_tiles_layer']);
+  });
+});
+
+// D39: required_styles/optional_styles reference a whole published Martin
+// style (GET {base}/style/{style_id}) rather than a single source_id.
+function intentWithStyles(catalog: { id: string; type: string; uri: string }, requiredStyleIds: string[]): MapIntent {
+  return {
+    spec_version: 'map-intent/v2',
+    goal: 'test styles',
+    catalog_context: { active_catalogs: [catalog] },
+    required_styles: requiredStyleIds.map((style_id) => ({ style_id })),
+    provenance: { generated_by: 'test', generated_at: '2026-07-21T00:00:00Z', intent_id: 'test' }
+  } as MapIntent;
+}
+
+describe('resolveStyles (integration, live stars.optgeo.org catalog)', () => {
+  // stars.optgeo.org's catalog currently publishes `"styles": {}` (empty) --
+  // styles.vlcm isn't live yet (that's server-side Martin config, out of
+  // scope for this repo, D39). GET /style/vlcm 404s with a plain-text "No
+  // such style exists" body today, so this exercises the real "reports
+  // missing, not an error" path end-to-end without depending on a style
+  // that hasn't been published server-side yet.
+  it('reports an unpublished style_id as missing rather than fabricating a result', async () => {
+    const intent = intentWithStyles({ id: 'stars-optgeo', type: 'martin', uri: 'https://stars.optgeo.org/catalog' }, [
+      'vlcm'
+    ]);
+    const { resolved, missing } = await resolveStyles(intent);
+
+    expect(missing).toEqual(['vlcm']);
+    expect(resolved).toEqual([]);
+  }, 20000);
+
+  // Confirms the narrower SUPPORTED_STYLE_CATALOG_TYPES gate: a layers_txt
+  // catalog (hfu/layers-martin) has no "/style/{id}" endpoint at all (its
+  // catalog document has no "styles" key whatsoever), so it must never even
+  // be attempted for style resolution.
+  it('never resolves a style against a layers_txt catalog', async () => {
+    const intent = intentWithStyles(
+      { id: 'layers-martin', type: 'layers_txt', uri: 'https://hfu.github.io/layers-martin/catalog' },
+      ['vlcm']
+    );
+    const { resolved, missing } = await resolveStyles(intent);
+
+    expect(missing).toEqual(['vlcm']);
+    expect(resolved).toEqual([]);
+  }, 20000);
+});
+
+describe('resolveStyles (permissive input, mocked catalog)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('resolves a published style, tagging it with the resolving catalog_id and required flag', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          version: 8,
+          sources: { vlcm: { type: 'vector', tiles: ['https://example.org/vlcm/{z}/{x}/{y}'] } },
+          layers: [{ id: 'vlcm-natural-fill', type: 'fill', source: 'vlcm', 'source-layer': 'natural' }]
+        })
+      }))
+    );
+
+    const intent = intentWithStyles({ id: 'stars-optgeo', type: 'martin', uri: 'https://stars.optgeo.org/catalog' }, [
+      'vlcm'
+    ]);
+    const { resolved, missing } = await resolveStyles(intent);
+
+    expect(missing).toEqual([]);
+    expect(resolved).toHaveLength(1);
+    expect(resolved[0].style_id).toBe('vlcm');
+    expect(resolved[0].required).toBe(true);
+    expect(resolved[0].catalog_id).toBe('stars-optgeo');
+    expect(resolved[0].style.layers).toHaveLength(1);
+  });
+
+  it('rejects a response with no usable "layers" array', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ version: 8, sources: {} })
+      }))
+    );
+
+    const intent = intentWithStyles({ id: 'stars-optgeo', type: 'martin', uri: 'https://stars.optgeo.org/catalog' }, [
+      'no_layers_style'
+    ]);
+    const { resolved, missing } = await resolveStyles(intent);
+
+    expect(resolved).toEqual([]);
+    expect(missing).toEqual(['no_layers_style']);
   });
 });

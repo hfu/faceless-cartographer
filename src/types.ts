@@ -23,6 +23,15 @@ export interface LayerRef {
   label?: string;
 }
 
+// A reference to a whole published Martin style (sources+layers), not a
+// single source_id -- see DECISIONS.md D39. Only resolvable against a real
+// Martin server (catalog_type "martin"); layers_txt catalogs have no
+// concept of a published style to serve.
+export interface StyleRef {
+  style_id: string;
+  label?: string;
+}
+
 export interface Area {
   name?: string | null;
   bbox?: [number, number, number, number] | null;
@@ -51,8 +60,13 @@ export interface MapIntent {
   goal: string;
   area?: Area;
   catalog_context: CatalogContext;
-  required_layers: LayerRef[];
+  // D39: at least one of required_layers/required_styles must be non-empty
+  // (parseMapIntent enforces this) -- neither alone is mandatory at the type
+  // level, mirroring how optional_layers/optional_styles are already handled.
+  required_layers?: LayerRef[];
   optional_layers?: LayerRef[];
+  required_styles?: StyleRef[];
+  optional_styles?: StyleRef[];
   relationships_to_highlight?: string[];
   render_hints?: RenderHints;
   sharing_policy?: SharingPolicy;
@@ -108,4 +122,28 @@ export interface ResolvedLayer {
 export interface ResolveResult {
   resolved: ResolvedLayer[];
   missing: string[]; // source_ids that could not be resolved from any active catalog
+}
+
+// A published MapLibre style document, as served by a real Martin server's
+// GET {base}/style/{style_id} (Martin's own convention, not part of
+// TileJSON). Only the fields Cartographer actually reads are typed, same
+// policy as TileJson above (Postel's law, D12).
+export interface PublishedStyle {
+  version?: number;
+  sources: Record<string, Record<string, unknown>>;
+  layers: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
+export interface ResolvedStyle {
+  style_id: string;
+  label?: string;
+  required: boolean;
+  catalog_id: string;
+  style: PublishedStyle;
+}
+
+export interface ResolveStylesResult {
+  resolved: ResolvedStyle[];
+  missing: string[]; // style_ids that could not be resolved from any active catalog
 }

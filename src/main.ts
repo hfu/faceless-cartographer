@@ -1,5 +1,5 @@
 import { parseMapIntent } from './mapIntent.ts';
-import { resolveLayers } from './catalog.ts';
+import { resolveLayers, resolveStyles } from './catalog.ts';
 import { buildStyle, computeInitialView } from './style.ts';
 import { renderFormView, renderMapView } from './render.ts';
 import { decodeIntentFragment } from './fragment.ts';
@@ -23,8 +23,15 @@ async function handleSubmit(rawIntent: string): Promise<void> {
   }
 
   const { intent } = parsed;
-  const { resolved, missing } = await resolveLayers(intent);
-  const { style, unrenderable } = buildStyle(intent, resolved);
+  const [{ resolved, missing: missingLayers }, { resolved: resolvedStyles, missing: missingStyles }] = await Promise.all([
+    resolveLayers(intent),
+    resolveStyles(intent)
+  ]);
+  // D39: style misses are folded into the same missing/unrenderable arrays
+  // as layer misses -- one cartographer_feedback shape, no separate
+  // missing_styles/unrenderable_styles sibling fields.
+  const missing = [...missingLayers, ...missingStyles];
+  const { style, unrenderable, styleLayerIds } = buildStyle(intent, resolved, resolvedStyles);
   const view = computeInitialView(intent, resolved);
 
   renderMapView(app!, {
@@ -33,6 +40,8 @@ async function handleSubmit(rawIntent: string): Promise<void> {
     view,
     style,
     resolved,
+    resolvedStyles,
+    styleLayerIds,
     missing,
     unrenderable,
     onBack: () => showForm()

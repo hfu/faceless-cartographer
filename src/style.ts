@@ -1,4 +1,4 @@
-import type { MapIntent, ResolvedLayer, VectorLayerDescriptor } from './types.ts';
+import type { MapIntent, ResolvedLayer, ResolvedStyle, VectorLayerDescriptor } from './types.ts';
 import baseStyle from './base-style.json' with { type: 'json' };
 
 // A minimal MapLibre style object. Typed loosely here (rather than pulling in
@@ -91,12 +91,16 @@ function buildVectorSubLayers(sourceId: string, vectorLayers: VectorLayerDescrip
 // Thematic layers (from Map Intent required_layers/optional_layers) are inserted
 // between baseStyle.before (background + hillshade) and baseStyle.after (roads/labels),
 // matching the insertion point where kitavolca places VBM/VLCM data.
-export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { style: MapLibreStyle; unrenderable: string[] } {
+export function buildStyle(
+  intent: MapIntent,
+  resolved: ResolvedLayer[],
+  resolvedStyles: ResolvedStyle[] = []
+): { style: MapLibreStyle; unrenderable: string[]; styleLayerIds: Record<string, string[]> } {
   const sources: MapLibreStyle['sources'] = { ...baseStyle.sources };
   const thematicLayers: MapLibreStyle['layers'] = [];
   const unrenderable: string[] = [];
 
-  const requiredOrder = intent.required_layers.map((l) => l.source_id);
+  const requiredOrder = (intent.required_layers ?? []).map((l) => l.source_id);
   const optionalOrder = (intent.optional_layers ?? []).map((l) => l.source_id);
   const order = [...requiredOrder, ...optionalOrder];
 
@@ -166,6 +170,52 @@ export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { styl
     });
   }
 
+  // D39: required_styles/optional_styles reference a whole published Martin
+  // style rather than a single source_id. Processed after the layer loop
+  // above (its thematicLayers entries land first, style-derived ones after --
+  // simple declaration order, not interleaved) and inserted into the same
+  // thematic band, keeping the D24 invariant that background (bvmap +
+  // Mapterhorn) is always drawn regardless of Map Intent content.
+  const styleOrder = [
+    ...(intent.required_styles ?? []).map((s) => s.style_id),
+    ...(intent.optional_styles ?? []).map((s) => s.style_id)
+  ];
+  const styleById = new Map(resolvedStyles.map((s) => [s.style_id, s]));
+  const styleLayerIds: Record<string, string[]> = {};
+
+  for (const styleId of styleOrder) {
+    const resolvedStyle = styleById.get(styleId);
+    if (!resolvedStyle) continue; // already reported as missing by catalog resolution
+
+    const styleLayers = resolvedStyle.style.layers;
+    if (!Array.isArray(styleLayers) || styleLayers.length === 0) {
+      unrenderable.push(styleId);
+      continue;
+    }
+
+    // Later entries win on source-id collision -- same last-write-wins
+    // semantics as the base-then-per-layer source assembly above. A
+    // style_id colliding with a source_id string is an unhandled, narrow
+    // edge case (last write here wins); Staff is expected to keep the two
+    // namespaces distinct in practice.
+    Object.assign(sources, resolvedStyle.style.sources ?? {});
+
+    const visible = resolvedStyle.required ? 'visible' : 'none';
+    const ids: string[] = [];
+    for (const layer of styleLayers) {
+      // Force visibility to match required/optional state, same as an
+      // individual layer -- overriding whatever the published style itself
+      // set, never mutating the original fetched object in place.
+      const layerCopy: Record<string, unknown> = {
+        ...layer,
+        layout: { ...(layer.layout as Record<string, unknown> | undefined), visibility: visible }
+      };
+      thematicLayers.push(layerCopy);
+      ids.push(layerCopy.id as string);
+    }
+    styleLayerIds[styleId] = ids;
+  }
+
   const contours = (baseStyle as Record<string, unknown>).contours as Array<Record<string, unknown>> | undefined || [];
   const layers = [
     ...baseStyle.before,
@@ -183,7 +233,8 @@ export function buildStyle(intent: MapIntent, resolved: ResolvedLayer[]): { styl
       sprite: baseStyle.sprite,
       terrain: baseStyle.terrain
     },
-    unrenderable
+    unrenderable,
+    styleLayerIds
   };
 }
 

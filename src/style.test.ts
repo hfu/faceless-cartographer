@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildStyle, computeInitialView } from './style.ts';
-import type { MapIntent, ResolvedLayer } from './types.ts';
+import type { MapIntent, ResolvedLayer, ResolvedStyle } from './types.ts';
 
 function tilejson(tiles: string[], extra: Partial<ResolvedLayer['tilejson']> = {}) {
   return { tilejson: '3.0.0', tiles, ...extra };
@@ -137,6 +137,90 @@ describe('buildStyle', () => {
     expect(style.layers.find((l) => l.id === 'hillshade')).toBeDefined();
     // Terrain is set
     expect(style.terrain).toBeDefined();
+  });
+});
+
+// D39: required_styles/optional_styles reference a whole published Martin
+// style (sources+layers) rather than a single source_id.
+describe('buildStyle with resolved styles (D39)', () => {
+  function resolvedStyle(styleId: string, required: boolean, layers: Array<Record<string, unknown>>): ResolvedStyle {
+    return {
+      style_id: styleId,
+      required,
+      catalog_id: 'stars-optgeo',
+      style: { version: 8, sources: { [styleId]: { type: 'vector', tiles: [`https://e/${styleId}/{z}/{x}/{y}`] } }, layers }
+    };
+  }
+
+  it('merges a resolved style\'s sources/layers into the thematic band and tracks its layer ids', () => {
+    const styleIntent: MapIntent = { ...intent, required_layers: [], optional_layers: [], required_styles: [{ style_id: 'vlcm' }] };
+    const rs = resolvedStyle('vlcm', true, [
+      { id: 'vlcm-a', type: 'fill', source: 'vlcm', layout: { visibility: 'none' } },
+      { id: 'vlcm-b', type: 'line', source: 'vlcm' }
+    ]);
+
+    const { style, unrenderable, styleLayerIds } = buildStyle(styleIntent, [], [rs]);
+
+    expect(unrenderable).toEqual([]);
+    expect(style.sources.vlcm).toBeDefined();
+    const a = style.layers.find((l) => l.id === 'vlcm-a')!;
+    const b = style.layers.find((l) => l.id === 'vlcm-b')!;
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+    // Visibility is forced to match required/optional state, overriding
+    // whatever the published style itself set (D39).
+    expect((a.layout as { visibility: string }).visibility).toBe('visible');
+    expect((b.layout as { visibility: string }).visibility).toBe('visible');
+    expect(styleLayerIds.vlcm).toEqual(['vlcm-a', 'vlcm-b']);
+  });
+
+  it('forces optional-style layers hidden by default', () => {
+    const styleIntent: MapIntent = { ...intent, required_layers: [], optional_layers: [], optional_styles: [{ style_id: 'vbm' }] };
+    const rs = resolvedStyle('vbm', false, [{ id: 'vbm-a', type: 'fill', source: 'vbm', layout: { visibility: 'visible' } }]);
+
+    const { style } = buildStyle(styleIntent, [], [rs]);
+    const a = style.layers.find((l) => l.id === 'vbm-a')!;
+    expect((a.layout as { visibility: string }).visibility).toBe('none');
+  });
+
+  it('orders layer-based thematic layers before style-based ones', () => {
+    const styleIntent: MapIntent = { ...intent, required_layers: [{ source_id: 'std' }], optional_layers: [], required_styles: [{ style_id: 'vlcm' }] };
+    const resolvedLayers: ResolvedLayer[] = [
+      { source_id: 'std', required: true, catalog_id: 'x', tilejson: tilejson(['https://e/std/{z}/{x}/{y}.png']) }
+    ];
+    const rs = resolvedStyle('vlcm', true, [{ id: 'vlcm-a', type: 'fill', source: 'vlcm' }]);
+
+    const { style } = buildStyle(styleIntent, resolvedLayers, [rs]);
+    const stdIdx = style.layers.findIndex((l) => l.id === 'std');
+    const vlcmIdx = style.layers.findIndex((l) => l.id === 'vlcm-a');
+    expect(stdIdx).toBeGreaterThanOrEqual(0);
+    expect(vlcmIdx).toBeGreaterThan(stdIdx);
+  });
+
+  it('flags a style with no usable layers as unrenderable, without a styleLayerIds entry', () => {
+    const styleIntent: MapIntent = { ...intent, required_layers: [], optional_layers: [], required_styles: [{ style_id: 'empty_style' }] };
+    const rs = resolvedStyle('empty_style', true, []);
+
+    const { unrenderable, styleLayerIds } = buildStyle(styleIntent, [], [rs]);
+    expect(unrenderable).toEqual(['empty_style']);
+    expect(styleLayerIds.empty_style).toBeUndefined();
+  });
+
+  it('lets a style-contributed source win over a layer-contributed source on id collision', () => {
+    const styleIntent: MapIntent = { ...intent, required_layers: [{ source_id: 'shared' }], optional_layers: [], required_styles: [{ style_id: 'shared' }] };
+    const resolvedLayers: ResolvedLayer[] = [
+      { source_id: 'shared', required: true, catalog_id: 'x', tilejson: tilejson(['https://e/shared/{z}/{x}/{y}.png']) }
+    ];
+    const rs: ResolvedStyle = {
+      style_id: 'shared',
+      required: true,
+      catalog_id: 'stars-optgeo',
+      style: { version: 8, sources: { shared: { type: 'vector', tiles: ['https://e/shared-style/{z}/{x}/{y}'] } }, layers: [{ id: 'shared-layer', type: 'fill', source: 'shared' }] }
+    };
+
+    const { style } = buildStyle(styleIntent, resolvedLayers, [rs]);
+    expect(style.sources.shared.type).toBe('vector');
+    expect((style.sources.shared as { tiles: string[] }).tiles[0]).toBe('https://e/shared-style/{z}/{x}/{y}');
   });
 });
 

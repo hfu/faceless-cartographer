@@ -22,7 +22,7 @@ export function parseMapIntent(yamlText: string): ParseResult {
 
   const doc = raw as Record<string, unknown>;
 
-  for (const required of ['spec_version', 'goal', 'catalog_context', 'required_layers', 'provenance']) {
+  for (const required of ['spec_version', 'goal', 'catalog_context', 'provenance']) {
     if (!(required in doc) || doc[required] === null || doc[required] === undefined) {
       return { ok: false, error: `Map Intent is missing required field "${required}".` };
     }
@@ -77,13 +77,19 @@ export function parseMapIntent(yamlText: string): ParseResult {
     }
   }
 
+  // D39: required_layers is no longer unconditionally mandatory -- a Map
+  // Intent can instead (or additionally) reference required_styles, a whole
+  // published Martin style rather than individual source_ids. At least one
+  // of the two must still be present and non-empty.
   const requiredLayers = doc.required_layers;
-  if (!Array.isArray(requiredLayers) || requiredLayers.length === 0) {
-    return { ok: false, error: '"required_layers" must be a non-empty array.' };
-  }
-  for (const [i, layer] of requiredLayers.entries()) {
-    if (typeof layer !== 'object' || layer === null || typeof (layer as Record<string, unknown>).source_id !== 'string') {
-      return { ok: false, error: `required_layers[${i}] must have a string "source_id".` };
+  if (requiredLayers !== undefined) {
+    if (!Array.isArray(requiredLayers)) {
+      return { ok: false, error: '"required_layers" must be an array.' };
+    }
+    for (const [i, layer] of requiredLayers.entries()) {
+      if (typeof layer !== 'object' || layer === null || typeof (layer as Record<string, unknown>).source_id !== 'string') {
+        return { ok: false, error: `required_layers[${i}] must have a string "source_id".` };
+      }
     }
   }
 
@@ -97,6 +103,39 @@ export function parseMapIntent(yamlText: string): ParseResult {
         return { ok: false, error: `optional_layers[${i}] must have a string "source_id".` };
       }
     }
+  }
+
+  const requiredStyles = doc.required_styles;
+  if (requiredStyles !== undefined) {
+    if (!Array.isArray(requiredStyles)) {
+      return { ok: false, error: '"required_styles" must be an array.' };
+    }
+    for (const [i, s] of requiredStyles.entries()) {
+      if (typeof s !== 'object' || s === null || typeof (s as Record<string, unknown>).style_id !== 'string') {
+        return { ok: false, error: `required_styles[${i}] must have a string "style_id".` };
+      }
+    }
+  }
+
+  const optionalStyles = doc.optional_styles;
+  if (optionalStyles !== undefined) {
+    if (!Array.isArray(optionalStyles)) {
+      return { ok: false, error: '"optional_styles" must be an array.' };
+    }
+    for (const [i, s] of optionalStyles.entries()) {
+      if (typeof s !== 'object' || s === null || typeof (s as Record<string, unknown>).style_id !== 'string') {
+        return { ok: false, error: `optional_styles[${i}] must have a string "style_id".` };
+      }
+    }
+  }
+
+  const hasRequiredLayers = Array.isArray(requiredLayers) && requiredLayers.length > 0;
+  const hasRequiredStyles = Array.isArray(requiredStyles) && requiredStyles.length > 0;
+  if (!hasRequiredLayers && !hasRequiredStyles) {
+    return {
+      ok: false,
+      error: 'Map Intent must have at least one non-empty "required_layers" or "required_styles" array.'
+    };
   }
 
   const provenance = doc.provenance as Record<string, unknown>;

@@ -2,7 +2,7 @@ import maplibregl from 'maplibre-gl';
 import { load as yamlLoad, dump as yamlDump } from 'js-yaml';
 import { LayerControl } from 'maplibre-gl-layer-control';
 import 'maplibre-gl-layer-control/style.css';
-import type { MapIntent, ResolvedLayer } from './types.ts';
+import type { MapIntent, ResolvedLayer, ResolvedStyle } from './types.ts';
 import type { InitialView, MapLibreStyle } from './style.ts';
 import { encodeIntentFragment } from './fragment.ts';
 
@@ -165,22 +165,24 @@ export function renderMapView(
     view: InitialView;
     style: MapLibreStyle;
     resolved: ResolvedLayer[];
+    resolvedStyles: ResolvedStyle[];
+    styleLayerIds: Record<string, string[]>;
     missing: string[];
     unrenderable: string[];
     onBack: () => void;
   }
 ): void {
-  const { rawIntent, intent, view, style, resolved, missing, unrenderable, onBack } = opts;
+  const { rawIntent, intent, view, style, resolved, resolvedStyles, styleLayerIds, missing, unrenderable, onBack } = opts;
 
   const missingNotice =
     missing.length > 0
-      ? `<div class="notice"><strong>見つからないレイヤー(missing_layers)</strong>: ${missing.map(escapeHtml).join(', ')}</div>`
+      ? `<div class="notice"><strong>見つからないレイヤー/スタイル(missing_layers)</strong>: ${missing.map(escapeHtml).join(', ')}</div>`
       : '';
   const unrenderableNotice =
     unrenderable.length > 0
-      ? `<div class="notice"><strong>ベクトルタイルのため描画をスキップしたレイヤー</strong>: ${unrenderable
+      ? `<div class="notice"><strong>描画をスキップしたレイヤー/スタイル</strong>: ${unrenderable
           .map(escapeHtml)
-          .join(', ')}(vector_layers が catalog 側に無く、描画に必要なスタイル情報を復元できません)</div>`
+          .join(', ')}(vector_layers が catalog 側に無い、またはスタイルに描画可能な layers が無いため、描画に必要な情報を復元できません)</div>`
       : '';
 
   // All layers (required and optional) displayed uniformly with checkboxes
@@ -205,6 +207,25 @@ export function renderMapView(
     )
     .join('\n');
 
+  // D39: a resolved style is a whole published Martin style (potentially
+  // many maplibre layers), not a single source_id -- one checkbox toggles
+  // all of it via styleLayerIds (see the toggle wiring below), same visual
+  // treatment as a layer checkbox but with no legend markup (no upstream
+  // legend_image_url equivalent exists at style granularity, D39).
+  const allStyleCheckboxes = resolvedStyles
+    .map(
+      (s) =>
+        `<div class="layer-item">
+          <label class="dads-checkbox" data-size="sm">
+            <span class="dads-checkbox__checkbox">
+              <input class="dads-checkbox__input" type="checkbox" data-layer-toggle="${escapeHtml(s.style_id)}"${s.required ? ' checked' : ''}>
+            </span>
+            <span class="dads-checkbox__label">${escapeHtml(s.label ?? s.style_id)}</span>
+          </label>
+        </div>`
+    )
+    .join('\n');
+
   container.innerHTML = `
 <div class="map-view">
   <div id="map"></div>
@@ -219,11 +240,11 @@ export function renderMapView(
       <p>${escapeHtml(intent.goal)}</p>
       ${missingNotice}
       ${unrenderableNotice}
-      ${resolved.length > 0 ? `
+      ${resolved.length > 0 || resolvedStyles.length > 0 ? `
       <div class="layer-search-wrapper" style="margin: .5rem 0;">
         <input type="text" id="layer-search" placeholder="🔍 Search layers..." class="dads-text-input" style="width: 100%; font-size: 0.88rem; padding: 0.4rem 0.6rem; border: 1px solid rgba(0, 0, 0, 0.2); border-radius: var(--border-radius-4);">
       </div>
-      <div class="layers">${allLayerCheckboxes}</div>
+      <div class="layers">${allLayerCheckboxes}${allStyleCheckboxes}</div>
       ` : ''}
       <div class="url-reflection-control" style="margin: .5rem 0; font-size: 0.82rem;">
         <label class="dads-checkbox" data-size="sm">
@@ -268,10 +289,13 @@ export function renderMapView(
         return source && thematicSourceIds.has(source);
       })
       .map((layer) => layer.id as string);
+    // D39: styleLayerIds already has the authoritative layer-id list per
+    // resolved style -- no need to reverse-derive it from `source` again.
+    const styleContributedLayerIds = Object.values(styleLayerIds).flat();
 
     const layerControl = new LayerControl({
       collapsed: true,
-      layers: thematicLayerIds
+      layers: [...thematicLayerIds, ...styleContributedLayerIds]
     });
     map.addControl(layerControl, 'top-right');
   } catch (e) {
@@ -350,6 +374,14 @@ export function renderMapView(
     const list = layerIdsBySourceId.get(source) ?? [];
     list.push(id);
     layerIdsBySourceId.set(source, list);
+  }
+  // D39: a resolved style's layers may reference several distinct internal
+  // source ids, so its toggle group can't be reverse-derived from `source`
+  // the way a plain layer's can -- use the authoritative id list buildStyle
+  // already tracked instead. A style_id colliding with a source_id string
+  // is an unhandled, narrow edge case; this merge lets the style win.
+  for (const [styleId, ids] of Object.entries(styleLayerIds)) {
+    layerIdsBySourceId.set(styleId, ids);
   }
 
   container.querySelectorAll<HTMLInputElement>('[data-layer-toggle]').forEach((el) => {

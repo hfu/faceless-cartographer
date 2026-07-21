@@ -6,7 +6,26 @@ import type { MapIntent, ResolvedLayer, ResolvedStyle } from './types.ts';
 import type { InitialView, MapLibreStyle } from './style.ts';
 import { encodeIntentFragment } from './fragment.ts';
 
-const EXAMPLE_MAP_INTENT = `spec_version: "map-intent/v2"
+// Multiple worked examples (D40), each an independently verified answer to a
+// different sample question -- so switching examples always keeps "one click
+// away" true, rather than only the first one being demonstrably real. Both
+// are also fixtured as scripts/example-intents/ regression tests (02 and 07
+// respectively) and pass the eval-intent.ts harness (M2=M3=1.0).
+interface MapIntentExample {
+  id: string;
+  menuLabel: string;
+  sampleQuestionEn: string;
+  sampleQuestionJa: string;
+  yaml: string;
+}
+
+const EXAMPLES: MapIntentExample[] = [
+  {
+    id: 'ishikari-flood-control',
+    menuLabel: '石狩川の治水（レイヤー構成）',
+    sampleQuestionEn: 'I want to explore flood control of the Ishikari River.',
+    sampleQuestionJa: '石狩川の治水について考えたい。',
+    yaml: `spec_version: "map-intent/v2"
 goal: "石狩川下流域（石狩平野）の治水を考えるため、治水地形分類図（旧河道・自然堤防・後背湿地などの地形）と洪水浸水想定区域を重ね、地形条件と想定される浸水範囲の関係を背景地形とともに示す。"
 area:
   name: "石狩川下流域（石狩平野）"
@@ -34,7 +53,39 @@ provenance:
   generated_by: "faceless-cartographer"
   generated_at: "2026-07-09T00:00:00Z"
   intent_id: "example-ishikari-flood-control"
-`;
+`
+  },
+  {
+    id: 'volcano-land-condition-map',
+    menuLabel: '北海道の火山土地条件図（スタイル参照、D39）',
+    sampleQuestionEn: 'I want to see the volcanic land condition map of Hokkaido.',
+    sampleQuestionJa: '北海道の火山土地条件図を見たい。',
+    yaml: `spec_version: "map-intent/v2"
+goal: "北海道（道央）の火山土地条件図を、地形とともに示す。"
+area:
+  name: "有珠山・洞爺湖周辺"
+  bbox: [140.6, 42.4, 141.1, 42.8]
+catalog_context:
+  active_catalogs:
+    - id: "stars-optgeo"
+      type: "martin"
+      uri: "https://stars.optgeo.org/catalog"
+required_styles:
+  - style_id: "vlcm"
+    label: "火山土地条件図"
+optional_styles:
+  - style_id: "vbm"
+    label: "火山基本図"
+sharing_policy:
+  url_share: true
+  intent_share: true
+provenance:
+  generated_by: "faceless-cartographer"
+  generated_at: "2026-07-21T00:00:00Z"
+  intent_id: "example-volcano-land-condition-map"
+`
+  }
+];
 
 function escapeHtml(value: string): string {
   return value
@@ -85,7 +136,7 @@ export function renderFormView(
   container: HTMLElement,
   opts: { prefill?: string; error?: string; staffPromptMarkdown: string; onSubmit: (rawIntent: string) => void }
 ): void {
-  const value = escapeHtml(opts.prefill ?? EXAMPLE_MAP_INTENT);
+  const value = escapeHtml(opts.prefill ?? EXAMPLES[0].yaml);
   const errorBlock = opts.error ? `<div class="notice error">${escapeHtml(opts.error)}</div>` : '';
   const staffPromptRaw = extractStaffPromptBlock(opts.staffPromptMarkdown);
   const staffPrompt = escapeHtml(staffPromptRaw);
@@ -121,9 +172,12 @@ export function renderFormView(
     <div class="card">
       <h2 class="card-step">2. Ask your AI</h2>
       <p>Now ask your AI a map question. For example:</p>
-      <div class="sample">
-        <p>I want to explore flood control of the Ishikari River.</p>
-        <p>石狩川の治水について考えたい。</p>
+      <select id="example-select" class="dads-text-input" style="width:100%;margin-bottom:.5rem;padding:0.4rem 0.6rem;">
+        ${EXAMPLES.map((ex) => `<option value="${escapeHtml(ex.id)}">${escapeHtml(ex.menuLabel)}</option>`).join('\n')}
+      </select>
+      <div class="sample" id="sample-question">
+        <p>${escapeHtml(EXAMPLES[0].sampleQuestionEn)}</p>
+        <p>${escapeHtml(EXAMPLES[0].sampleQuestionJa)}</p>
       </div>
     </div>
     <div class="card">
@@ -142,9 +196,22 @@ export function renderFormView(
   copyPromptButton.addEventListener('click', () => copyToClipboard(copyPromptButton, staffPromptRaw));
 
   const form = container.querySelector<HTMLFormElement>('#intent-form')!;
+  const textarea = form.querySelector<HTMLTextAreaElement>('textarea[name=map_intent]')!;
+
+  // Switching examples overwrites both the sample question (Step 2) and the
+  // pre-filled Map Intent (Step 3) together, so they never drift apart --
+  // each dropdown entry is a matched, independently verified question+intent
+  // pair (D40), not just an arbitrary YAML swap.
+  const exampleSelect = container.querySelector<HTMLSelectElement>('#example-select')!;
+  const sampleQuestionDiv = container.querySelector<HTMLElement>('#sample-question')!;
+  exampleSelect.addEventListener('change', () => {
+    const selected = EXAMPLES.find((ex) => ex.id === exampleSelect.value) ?? EXAMPLES[0];
+    sampleQuestionDiv.innerHTML = `<p>${escapeHtml(selected.sampleQuestionEn)}</p><p>${escapeHtml(selected.sampleQuestionJa)}</p>`;
+    textarea.value = selected.yaml;
+  });
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const textarea = form.querySelector<HTMLTextAreaElement>('textarea[name=map_intent]')!;
     opts.onSubmit(textarea.value);
   });
 }

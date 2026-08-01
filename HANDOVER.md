@@ -107,24 +107,17 @@ Cartographer は複数の Staff・複数の Library カタログと組み合わ�
   - 修正: Mapterhorn 公式 `tilejson.json` と同様にズーム上限を指定しない状態に統一
   - Effect: z16 タイルが提供されている地域ではより高精細な地形陰影・3D地形表現が可能
 
-- **2026-07-18: Issue #4「UI / UX を改善する」実装完了（デリバリー前チェック中）**
-  - **フォーム画面の3ステップ化**: `src/render.ts` renderFormView の完全再構成完了（lines 67-140）
+- **2026-07-18〜21: Issue #4「UI / UX を改善する」実装完了**
+  - **フォーム画面の3ステップ化**: `src/render.ts` renderFormView の完全再構成。
     - ページヘッダカード: "AI Maps" + "Make a map with your AI. Three steps: Prompt, Ask, Paste."
     - Step 1（Prompt your AI）: Copy ボタン＋Staff プロンプト（折りたたみ式）
-    - Step 2（Ask your AI）: EN/JA サンプル問い「I want to explore flood control...」「石狩川の治水について考えたい」
+    - Step 2（Ask your AI）: EN/JA サンプル問い（D40 以降は選択中の Example に連動、下記参照）
     - Step 3（Paste）: 従来の textarea と Render ボタン
-    - Copy ボタンハンドラ（`#copy-staff-prompt`、lines 124-132）が Staff プロンプトをクリップボードへ、"Copied!" フィードバック実装済み
-  - **地図画面の文言更新**: `src/render.ts` renderMapView で "Copy Intent"（line 227）と "Back"（line 228）へ変更完了
-  - **ブランディング統一（単数形への修正待機）**:
-    - `index.html` title（line 6）: 現状 "AI Maps"（複数形） → "AI Map"（単数形）に修正必要
-    - renderFormView の h1（line 80）: 現状 "AI Maps" → "AI Map" に修正必要
-    - renderMapView の h1（line 208）: 現状 "AI Maps" → "AI Map" に修正必要
-    - Plan では単数形を明示指定、ユーザーも確認済み
-  - **CSS 整備**: `.step-header`、`.card-step`、`.sample` class がすべて index.html に既に定義済み（lines 26-29）
-  - **残検証**:
-    - ブランディング統一（タイトル単数形への修正）
-    - `npm run typecheck` の型エラー確認
-    - ブラウザプレビューでの UI/UX 検証（form flow、button 動作、レスポンシブ、タブタイトル確認）
+  - **地図画面の文言更新**: `src/render.ts` renderMapView で "Copy Intent"・"Back" へ変更完了
+  - **ブランディングは "AI Maps"（複数形）に確定**（2026-07-21）: `index.html` title・renderFormView の h1・renderMapView の h1 の3箇所すべて "AI Maps" に統一し、ブラウザで確認済み。（Plan段階では単数形 "AI Map" を検討していたが、最終的にユーザー指示で複数形に確定。過去のこのHANDOVER記述が単数形を指していたのは古い情報だったため訂正。）
+  - **クリップボードのエラーハンドリング修正**（2026-07-21）: `navigator.clipboard.writeText()` が失敗（権限拒否等）した場合、"Copy"/"Copy Intent" ボタンが無反応のまま固まっていた問題を修正。共通ヘルパー `copyToClipboard()` を新設し、失敗時は "Copy failed" を表示してから元のラベルに復帰するようにした（`#copy-staff-prompt`・`#copy-intent` 両方に適用）。実際にクリップボード権限が無い環境で動作確認済み。
+  - **CSS 整備**: `.step-header`、`.card-step`、`.sample` class を index.html に定義。
+  - **検証**: `npm run typecheck`/`test`/`build` すべてグリーン、ブラウザでの UI/UX 検証（form flow、button 動作、レスポンシブ、タブタイトル）完了。
 
 - **2026-07-18: kitavolca(vbm/vlcm)統合を実地検証、コード変更不要と確認**
   - `hfu/kitavolca` で z5-z11 の minzoom 階層最適化(等高線・水涯線・記号のズーム整合)が完了し、`stars.optgeo.org` へ再アップロード済み(vbm/vlcm)になったのを機に、これらが faceless-cartographer で実際に使えるかを確認

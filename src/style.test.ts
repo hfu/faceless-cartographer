@@ -115,6 +115,39 @@ describe('buildStyle', () => {
     expect((bldaFill.filter as unknown[])[1]).toEqual(['geometry-type']);
   });
 
+  // D41: feature-click attribute popups query queryRenderedFeatures by
+  // layer id, so buildStyle needs to hand back exactly which layer ids
+  // carry real feature properties.
+  it('tracks the generic vector sub-layers as clickable, excluding always-on background layers', () => {
+    const resolved: ResolvedLayer[] = [
+      {
+        source_id: 'bvmap',
+        required: true,
+        catalog_id: 'stars',
+        tilejson: tilejson(['https://stars.optgeo.org/bvmap/{z}/{x}/{y}'], {
+          vector_layers: [{ id: 'BldA' }]
+        })
+      }
+    ];
+    const bvmapIntent: MapIntent = { ...intent, required_layers: [{ source_id: 'bvmap' }], optional_layers: [] };
+
+    const { clickableLayerIds } = buildStyle(bvmapIntent, resolved);
+
+    expect(clickableLayerIds).toEqual(
+      expect.arrayContaining(['bvmap__BldA__fill', 'bvmap__BldA__line', 'bvmap__BldA__circle'])
+    );
+    // Always-on background layers (D24) are never clickable.
+    expect(clickableLayerIds).not.toEqual(expect.arrayContaining(['background', 'hillshade']));
+  });
+
+  it('a raster layer contributes no clickable layer ids (no feature properties to show)', () => {
+    const resolved: ResolvedLayer[] = [
+      { source_id: 'std', required: true, catalog_id: 'x', tilejson: tilejson(['https://e/std/{z}/{x}/{y}.png']) }
+    ];
+    const { clickableLayerIds } = buildStyle({ ...intent, required_layers: [{ source_id: 'std' }], optional_layers: [] }, resolved);
+    expect(clickableLayerIds).toEqual([]);
+  });
+
   it('an empty vector_layers array is treated the same as absent (still unrenderable)', () => {
     const resolved: ResolvedLayer[] = [
       { source_id: 'hazard', required: true, catalog_id: 'x', tilejson: tilejson(['https://e/h/{z}/{x}/{y}.pbf'], { vector_layers: [] }) }
@@ -159,7 +192,7 @@ describe('buildStyle with resolved styles (D39)', () => {
       { id: 'vlcm-b', type: 'line', source: 'vlcm' }
     ]);
 
-    const { style, unrenderable, styleLayerIds } = buildStyle(styleIntent, [], [rs]);
+    const { style, unrenderable, styleLayerIds, clickableLayerIds } = buildStyle(styleIntent, [], [rs]);
 
     expect(unrenderable).toEqual([]);
     expect(style.sources.vlcm).toBeDefined();
@@ -172,6 +205,9 @@ describe('buildStyle with resolved styles (D39)', () => {
     expect((a.layout as { visibility: string }).visibility).toBe('visible');
     expect((b.layout as { visibility: string }).visibility).toBe('visible');
     expect(styleLayerIds.vlcm).toEqual(['vlcm-a', 'vlcm-b']);
+    // D41: a required_style's layers carry real feature properties too, so
+    // they're clickable just like the generic vector_layers sub-layers.
+    expect(clickableLayerIds).toEqual(expect.arrayContaining(['vlcm-a', 'vlcm-b']));
   });
 
   it('forces optional-style layers hidden by default', () => {

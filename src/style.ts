@@ -95,10 +95,17 @@ export function buildStyle(
   intent: MapIntent,
   resolved: ResolvedLayer[],
   resolvedStyles: ResolvedStyle[] = []
-): { style: MapLibreStyle; unrenderable: string[]; styleLayerIds: Record<string, string[]> } {
+): { style: MapLibreStyle; unrenderable: string[]; styleLayerIds: Record<string, string[]>; clickableLayerIds: string[] } {
   const sources: MapLibreStyle['sources'] = { ...baseStyle.sources };
   const thematicLayers: MapLibreStyle['layers'] = [];
   const unrenderable: string[] = [];
+  // Layer ids with real feature properties behind them (D41: feature-click
+  // attribute popups) -- the generic per-source-layer fill/line/circle
+  // layers from buildVectorSubLayers, tracked as they're built rather than
+  // pattern-matched back out of `thematicLayers` afterwards. Deliberately
+  // excludes the always-on bvmap background (D24): only Map Intent-driven
+  // content should be clickable, matching kitavolca's own precedent.
+  const vectorLayerIds: string[] = [];
 
   const requiredOrder = (intent.required_layers ?? []).map((l) => l.source_id);
   const optionalOrder = (intent.optional_layers ?? []).map((l) => l.source_id);
@@ -134,7 +141,9 @@ export function buildStyle(
       // when the schema is actually known -- guessing a source-layer name
       // would be worse than not rendering at all.
       if (hasVectorLayers) {
-        thematicLayers.push(...buildVectorSubLayers(sourceId, layer.tilejson.vector_layers!, visible));
+        const subLayers = buildVectorSubLayers(sourceId, layer.tilejson.vector_layers!, visible);
+        thematicLayers.push(...subLayers);
+        vectorLayerIds.push(...subLayers.map((l) => l.id as string));
       } else {
         unrenderable.push(sourceId);
       }
@@ -224,6 +233,12 @@ export function buildStyle(
     ...baseStyle.after
   ];
 
+  // D41: a required_style/optional_style's layers (e.g. vlcm/vbm published
+  // by a real Martin server) carry real feature properties just like the
+  // generic vector_layers sub-layers do -- both are Map Intent-driven
+  // thematic content, so both are clickable.
+  const clickableLayerIds = [...vectorLayerIds, ...Object.values(styleLayerIds).flat()];
+
   return {
     style: {
       version: 8,
@@ -234,7 +249,8 @@ export function buildStyle(
       terrain: baseStyle.terrain
     },
     unrenderable,
-    styleLayerIds
+    styleLayerIds,
+    clickableLayerIds
   };
 }
 

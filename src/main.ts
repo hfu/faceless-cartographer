@@ -31,7 +31,7 @@ async function handleSubmit(rawIntent: string): Promise<void> {
   // as layer misses -- one cartographer_feedback shape, no separate
   // missing_styles/unrenderable_styles sibling fields.
   const missing = [...missingLayers, ...missingStyles];
-  const { style, unrenderable, styleLayerIds } = buildStyle(intent, resolved, resolvedStyles);
+  const { style, unrenderable, styleLayerIds, clickableLayerIds } = buildStyle(intent, resolved, resolvedStyles);
   const view = computeInitialView(intent, resolved);
 
   renderMapView(app!, {
@@ -42,6 +42,7 @@ async function handleSubmit(rawIntent: string): Promise<void> {
     resolved,
     resolvedStyles,
     styleLayerIds,
+    clickableLayerIds,
     missing,
     unrenderable,
     onBack: () => showForm()

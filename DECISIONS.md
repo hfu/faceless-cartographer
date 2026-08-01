@@ -43,6 +43,10 @@
 | [D35](#d35-copy-shareable-link-ボタンの廃止--idempotent-cartographer-の実装) | 「Copy Shareable Link」ボタンの廃止 ―― idempotent Cartographer の実装 | Accepted | 2026-07-10 |
 | [D36](#d36-cartographer-の2つのモードfaceless-と-idempotent) | Cartographer の2つのモード（faceless と idempotent） | Accepted | 2026-07-10 |
 | [D37](#d37-複数ラスタオーバーレイの可読性のため下に主題があるラスタを半透明にする) | 複数ラスタ・オーバーレイの可読性のため、下に主題があるラスタを半透明にする | Accepted | 2026-07-17 |
+| [D38](#d38-panel-layer-item-label-の-display-block-を撤去するkitavolcaからの逆輸入) | `.panel .layer-item label` の `display: block` を撤去する(kitavolcaからの逆輸入) | Accepted | 2026-07-19 |
+| [D39](#d39-map-intent-に-required_stylesoptional_styles-を追加するsource_id-ではなくスタイル全体を参照できるようにするissue-6) | Map Intent に `required_styles`/`optional_styles` を追加する(source_id ではなくスタイル全体を参照できるようにする、Issue #6) | Accepted | 2026-07-21 |
+| [D40](#d40-フォーム初期値を複数の-example-map-intent-からドロップダウンで選択可能にする) | フォーム初期値を複数の Example Map Intent からドロップダウンで選択可能にする | Accepted | 2026-07-21 |
+| [D41](#d41-フィーチャークリックでの属性ポップアップを実装するnumber型-or-codeコードという名前-のor-ヒューリスティックで一般向けキーに絞る) | フィーチャークリックでの属性ポップアップを実装する(Number型 or 「code/コード」という名前、のORヒューリスティックで一般向けキーに絞る) | Accepted | 2026-08-02 |
 
 ---
 
@@ -660,16 +664,37 @@ MapLibre GL JS ではラスタに信頼できる blend-mode が使えないた�
 - typecheck/test(46件)パス。
 - `hfu/layers-martin` 側の変更は同リポジトリの DECISIONS.md に別途記録する。
 
+## D41: フィーチャークリックでの属性ポップアップを実装する(Number型 or 「code/コード」という名前、のORヒューリスティックで一般向けキーに絞る)
+
+**Status**: Accepted
+
+**Context**: 2026-07-19 のバックログ検討(下記)で、`hfu/kitavolca` の属性ポップアップ機能を Cartographer に移植する際、属性フィルタリング(「一般向けキーのみ」に絞る)がカタログ固有のスキーマ知識(kitavolca は VBM の `名称`/`注記`、VLCM の `class1-6`/`name` をハードコード許可リストしていた)に依存しており、Cartographer の「任意のカタログを汎用描画する」設計(D23)と衝突するため実装を見送っていた。代案として「値が数値のみのプロパティを既定で隠す」というスキーマ非依存ヒューリスティックが挙げられていたが、精度は未検証だった。
+
+本セッションでこの検証を再開し、実在する4つの独立したカタログの TileJSON `vector_layers[].fields`(プロパティ名→型のメタデータ、実サーバーが実際のMVT内容を検査して返す)を実際に取得して精度を確かめた: `stars.optgeo.org` の `bvmap`(国土地理院最適化ベクトルタイル)・`vlcm`(火山土地条件図)・`vbm`(火山基本図、いずれもGSI由来)、および `demotiles.maplibre.org`(MapLibre公式デモ、Natural Earth由来・非GSI・英語スキーマ)。
+
+結果、「数値型のみ隠す」ヒューリスティック単独では不十分と判明した: VLCM の `code`/`code1`〜`code6` は String型の内部コードだが、数値型チェックでは隠せない。一方、**フィールド名に `code`/`コード` を含むかどうか**という別シグナルは、4カタログすべてで内部コード(`vt_code`・`出典コード`・`分類コード`・`code`・`code1`〜`code6`・`vt_rtcode` の部分一致)を一貫して言い当てた。この2つのシグナルを **OR** で組み合わせる(数値型 or 名前に code/コードを含む → 隠す)と、4カタログとも大きな誤りなく「一般向け」プロパティ(`name`・`class1`〜`class6`・`名称`・`注記`・`NAME`・`ABBREV` 等)だけが残った。既知の残存誤り(`表示区分`・`vt_railstate`・`vt_sngldbl` など数件、隠したいが隠せない)は、公開されているGSIオープンデータの範囲内の取りこぼしであり、元のkitavolcaの懸念(エンタープライズ内部のビジネスロジックの漏洩)には該当しない。標高・水深など数値型だが本来は一般向けの値を誤って隠してしまう既知の限界(false-hide)もあるが、内部コードを取りこぼすより安全な既定と判断し許容した。
+
+**Decision**:
+
+1. **型判定は実行時、MVTがデコードした実際のJS型で行う**(`typeof value === 'number'`)。TileJSON の `vector_layers[].fields` 宣言(`"Mixed"` 型を含み得る)を別途プラミングして参照するのではなく、クリックされたフィーチャーの `properties` 自体の型を直接見る方が、feature ごとに正確で実装も単純になる。このため `buildStyle`/`ResolvedLayer` 側に `fields` メタデータを新たに引き回す変更は不要だった。
+2. **`src/render.ts`** に3つの純粋関数を追加(テスト用にexport): `isInternalPropertyKey(key)`(`/code|コード/i` 正規表現)、`shouldShowProperty(key, value)`(数値型 or `isInternalPropertyKey` → false)、`buildPopupHtml(properties)`(フィルタ後0件なら `null` を返し、ポップアップ自体を出さない)。
+3. **クリック対象のスコープを明示的に絞る**: `src/style.ts` の `buildStyle()` に `clickableLayerIds: string[]` を新設し、返り値に追加した。中身は「D23の汎用ベクトルサブレイヤー(`${sourceId}__${vl.id}__{fill,line,circle}`)」+「D39の `styleLayerIds`(required_styles/optional_styles のレイヤーID)」の合併。常時描画される bvmap 背景(D24)は明示的に除外される(そもそも `vectorLayerIds`/`styleLayerIds` に入らない)——kitavolca 自身の実装も vlcm/vbm のみをクリック対象にしており、背景は対象外という前例と一致する。
+4. **`src/render.ts` の `renderMapView`** で、`clickableLayerIds` が空でなければ `mousemove` でカーソルを `pointer` に、`click` で `map.queryRenderedFeatures(e.point, { layers: clickableLayerIds })` の先頭フィーチャーから `buildPopupHtml` を呼び出し、`null` でなければ `maplibregl.Popup` を表示する。`queryRenderedFeatures` は非表示(`visibility: 'none'`)のレイヤーを自然に除外するため、OFFにしている任意レイヤーは自動的にクリック不可になる(追加のガード不要)。
+5. **`index.html`** に `.maplibregl-popup-content` のスタイルを追加し、`.panel` と同じDADSトークン(`rgba(255,255,255,0.92)` blur背景・`--border-radius-12`・`--elevation-1`)で再スタイリング。属性は `<dl class="feature-popup">` の2カラムgridで表示。
+
+**Consequences**:
+- `src/style.ts`/`src/style.test.ts`: `clickableLayerIds` の追加とテスト(汎用ベクトルサブレイヤー・required_styles両方が含まれること、ラスタレイヤーは0件であること、背景レイヤーが含まれないこと)。
+- `src/render.ts`: 新規 `src/render.test.ts` で `isInternalPropertyKey`/`shouldShowProperty`/`buildPopupHtml` を実データ由来のフィールド名(本セクションの検証で使ったもの)でユニットテスト。
+- `src/main.ts`: `buildStyle` の戻り値から `clickableLayerIds` を `renderMapView` に渡す配線を追加。
+- ブラウザで実際に検証: 火山土地条件図の例(D39)を描画し、有珠山周辺の実VLCMフィーチャーをクリックして `name: 旧河道` のみを表示するポップアップが出ることを確認(`code`/`class`/`ID` 等は表示されない)。常時描画のbvmap背景をクリックしてもポップアップが出ないことも確認。
+- typecheck/build/test(101件)パス。
+- この機能は `vector_layers` を公開する実 Martin サーバー(stars.optgeo.org 等)のカタログにのみ適用される。`hfu/layers-martin`(layers.txt ベース)は引き続き `vector_layers` を出力しない設計(D7)のため、そのレイヤーはクリック不可のまま(D23 の汎用描画自体が効かないのと同じ既存の制約)。
+
 ## バックログ(未決定・保留)
 
-### フィーチャークリックでの属性ポップアップ(未着手・検討のみ、2026-07-19)
+### フィーチャークリックでの属性ポップアップ(解消: D41、2026-08-02)
 
-`hfu/kitavolca` の `docs/app.js` に、地物クリックで属性を表示するポップアップと、その内容を「一般向けキーのみ」に絞る「詳細」トグルを実装した(kitavolca HANDOVER.md 2026-07-19)。同様の機能を Cartographer にも追加できるか検討した。
-
-- **デザイン面(吹き出しをパネルと同じDADSトークンで統一する)は問題なく移植可能**: 両リポジトリとも同じ `@digital-go-jp/design-tokens` と同一の `.panel` CSS(blur背景・`--border-radius-12`・`--elevation-1`)を使っており、`.maplibregl-popup-content` を同じトークンで再スタイリングするだけで一貫する。
-- **属性フィルタリング面は移植できない**: kitavolca のフィルタは「VBMの `名称`/`注記`」「VLCMの `class1-6`/`name`」という**特定カタログのスキーマを知っている前提**の許可リストである。Cartographer は任意の Map Intent カタログを汎用的に描画する設計(D23: `vector_layers` スキーマがあれば幾何タイプ別に汎用描画し、カタログ固有のスキーマ知識をハードコードしない)であり、この前提と直接衝突する。汎用化するなら「値が数値のみのプロパティを既定で隠す」のようなスキーマ非依存のヒューリスティックが必要だが、これは精度も要件も未検証の新規設計判断であり、今回のスコープでは実装を見送った。
-
-**現状**: 機能追加そのものは未実装。次にこの機能を検討する際は、上記のヒューリスティック案の精度検証(実際のカタログ横断でどれだけ「一般向け」に絞れるか)から始めるとよい。
+~~`hfu/kitavolca` の `docs/app.js` に、地物クリックで属性を表示するポップアップと、その内容を「一般向けキーのみ」に絞る「詳細」トグルを実装した(kitavolca HANDOVER.md 2026-07-19)。同様の機能を Cartographer にも追加できるか検討した。デザイン面は問題なく移植可能だが、属性フィルタリング面(kitavolcaは特定カタログのスキーマを知っている前提の許可リスト)はCartographerの汎用描画設計(D23)と衝突するため、スキーマ非依存のヒューリスティックの精度検証から始める必要があった。~~ 2026-08-02、実在4カタログでヒューリスティックの精度を検証した上で実装完了(D41)。解消済みのため削除。
 
 ### 凡例(legend)が画面上で分からない(解消: D14 + layers-martin D18)
 

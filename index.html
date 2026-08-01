@@ -61,6 +61,16 @@
   .panel .actions { position: sticky; bottom: 0; display: flex; gap: .5rem; align-items: center; margin-top: .6rem; flex-wrap: wrap; background: rgba(255, 255, 255, 0.85); padding: .6rem 0 0 0; margin-left: -0.9rem; margin-right: -0.9rem; padding-left: 1rem; padding-right: 1rem; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid rgba(0, 0, 0, 0.08); }
   @media (max-width: 30rem) { .panel { max-width: none; } }
   .maplibregl-ctrl-top-right { max-width: calc(100vw - 2rem); }
+
+  /* Feature-click attribute popup (D41), restyled to match .panel's tokens */
+  .maplibregl-popup-content {
+    background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--border-radius-12); box-shadow: var(--elevation-1);
+    padding: .7rem .9rem; font-size: 0.85rem;
+  }
+  .feature-popup { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: .15rem .6rem; }
+  .feature-popup dt { font-weight: 600; color: var(--color-neutral-solid-gray-536); grid-column: 1; }
+  .feature-popup dd { margin: 0; grid-column: 2; word-break: break-word; }
 </style>
 </head>
 <body>

@@ -96,6 +96,35 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+// D41: feature-click attribute popups. A property is considered "internal"
+// (hidden) rather than "general audience" (shown) using two signals
+// combined with OR, validated against four independent real vector
+// catalogs (bvmap/vlcm/vbm on stars.optgeo.org, plus MapLibre's own
+// Natural-Earth-derived demo tiles): a numeric value (MVT decodes numbers
+// to actual JS numbers, so this is read straight off the clicked feature --
+// more reliable than trusting a possibly-"Mixed" TileJSON field-type
+// declaration), or a key whose name contains "code"/"コード" (catches
+// string-typed internal codes a type check alone would miss, e.g. VLCM's
+// `code`/`code1`-`code6`). Neither signal alone is sufficient (see
+// DECISIONS.md D41); no catalog-specific schema knowledge is hardcoded,
+// keeping this consistent with D23's generic per-geometry-type rendering.
+export function isInternalPropertyKey(key: string): boolean {
+  return /code|コード/i.test(key);
+}
+
+export function shouldShowProperty(key: string, value: unknown): boolean {
+  return typeof value !== 'number' && !isInternalPropertyKey(key);
+}
+
+export function buildPopupHtml(properties: Record<string, unknown>): string | null {
+  const entries = Object.entries(properties).filter(([key, value]) => shouldShowProperty(key, value));
+  if (entries.length === 0) return null;
+  const rows = entries
+    .map(([key, value]) => `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(String(value))}</dd>`)
+    .join('');
+  return `<dl class="feature-popup">${rows}</dl>`;
+}
+
 // Clipboard writes can reject (denied permission, non-secure context, etc).
 // Without handling that, the button silently does nothing and the user has
 // no idea the copy failed -- so success and failure both get a transient
@@ -234,12 +263,13 @@ export function renderMapView(
     resolved: ResolvedLayer[];
     resolvedStyles: ResolvedStyle[];
     styleLayerIds: Record<string, string[]>;
+    clickableLayerIds: string[];
     missing: string[];
     unrenderable: string[];
     onBack: () => void;
   }
 ): void {
-  const { rawIntent, intent, view, style, resolved, resolvedStyles, styleLayerIds, missing, unrenderable, onBack } = opts;
+  const { rawIntent, intent, view, style, resolved, resolvedStyles, styleLayerIds, clickableLayerIds, missing, unrenderable, onBack } = opts;
 
   const missingNotice =
     missing.length > 0
@@ -368,6 +398,25 @@ export function renderMapView(
   } catch (e) {
     // Graceful degradation: if LayerControl fails to initialize, continue without it
     console.warn('LayerControl initialization failed; proceeding without layer panel', e);
+  }
+
+  // D41: feature-click attribute popups, scoped to clickableLayerIds
+  // (Map Intent-driven thematic vector content only -- never the always-on
+  // bvmap background, D24). queryRenderedFeatures naturally excludes
+  // currently-hidden optional layers (visibility: 'none'), so an unchecked
+  // layer isn't clickable either, matching what's actually visible.
+  if (clickableLayerIds.length > 0) {
+    map.on('mousemove', (e) => {
+      const features = map.queryRenderedFeatures(e.point, { layers: clickableLayerIds });
+      map.getCanvas().style.cursor = features.length > 0 ? 'pointer' : '';
+    });
+    map.on('click', (e) => {
+      const features = map.queryRenderedFeatures(e.point, { layers: clickableLayerIds });
+      if (features.length === 0) return;
+      const html = buildPopupHtml(features[0].properties ?? {});
+      if (!html) return; // nothing general-audience to show (D41)
+      new maplibregl.Popup({ closeButton: true, maxWidth: '18rem' }).setLngLat(e.lngLat).setHTML(html).addTo(map);
+    });
   }
 
   // Legend images, keyed by source_id, for whichever layers currently have

@@ -22,7 +22,7 @@ Library       カタログメタデータを公開する。参照実装は hfu/l
 
 Cartographer は意図的に「faceless」である: URLに地図の状態(ズーム・中心座標・選択レイヤー等)を一切持たせない。これは提案ではなく規範的な決定であり(`UNopenGIS/staccato-spec` の [ADR 0001](https://github.com/UNopenGIS/staccato-spec/blob/main/spec/adr/0001-faceless-cartographer.md))、覆すには新たな ADR が必要とされている。共有の一次artifactは Map Intent のテキスト自体であり、URLではない。
 
-本実装は ADR 0001 の「`GET /` はフォームを返し `POST /` が受理・描画する」という文言を、単一ページのSPA(クライアント側の状態遷移。実際のHTTPリクエストは発生しない)として満たしている。文言通りの実装ではないが、URLが一切変化しないという点でむしろ趣旨をより徹底して満たしている、という判断([DECISIONS.md](DECISIONS.md) D18)。この解釈の違いは当初spec repoへ提起できていない、意図的な逸脱として記録していたが、2026-07-06にADR 0003としてspec側へ明確化を提案するPRを出した([UNopenGIS/staccato-spec#1](https://github.com/UNopenGIS/staccato-spec/pull/1)、レビュー待ち)。
+本実装は ADR 0001 の「`GET /` はフォームを返し `POST /` が受理・描画する」という文言を、単一ページのSPA(クライアント側の状態遷移。実際のHTTPリクエストは発生しない)として満たしている。文言通りの実装ではないが、URLが一切変化しないという点でむしろ趣旨をより徹底して満たしている、という判断([DECISIONS.md](DECISIONS.md) D18)。この解釈の違いは当初spec repoへ提起できていない、意図的な逸脱として記録していたが、2026-07-06にADR 0003としてspec側へ明確化を提案するPRを出した([UNopenGIS/staccato-spec#1](https://github.com/UNopenGIS/staccato-spec/pull/1)、2026-07-07マージ済み)。
 
 ### なぜ Cartographer は「軽く」あるべきか
 
@@ -37,7 +37,15 @@ Cartographer は意図的に「faceless」である: URLに地図の状態(ズ�
 
 Cartographer は複数の Staff・複数の Library カタログと組み合わされる前提の、エコシステムの結節点である。そのため、Map Intent や TileJSON の受け取り側では過度に厳格な検証をしない: 例えば TileJSON の `tilejson` フィールドがバージョン文字列として想定外でも、`tiles` 配列が実際に使える形であれば描画する([D12](DECISIONS.md#d12-入力には寛容出力には厳格3リポジトリ間の整合性確認で見つけたギャップの是正))。spec上 SHOULD(MUSTでない)の規定に反する Map Intent(例: `sharing_policy.url_share: true`)も、拒否はせず警告に留めて処理を続ける。一方で、Cartographer 自身が出す HTML・ヘッダー(`Referrer-Policy` 等)や、コピーする Map Intent の形式は spec に厳密に従う。
 
-## 現在の状態(2026-07-21 時点)
+## 現在の状態(2026-08-02 時点)
+
+- **2026-08-02: フィーチャークリックでの属性ポップアップを実装(D41、実装完了)**
+  - 2026-07-19 のバックログ検討で未着手のまま残っていたkitavolca由来の機能。属性フィルタリング(「一般向けキーのみ」表示)を、カタログ固有スキーマ知識に頼らないヒューリスティック(数値型 or フィールド名に `code`/`コード` を含む → 隠す)で実装。
+  - 実装前に、実在4カタログ(`stars.optgeo.org` の `bvmap`/`vlcm`/`vbm`、および MapLibre公式デモ `demotiles.maplibre.org`)の TileJSON `vector_layers[].fields` を実際に取得してヒューリスティックの精度を検証してから着手した。「数値型のみ隠す」単独では VLCM の `code`/`code1`-`code6`(String型)を取りこぼすことが判明し、「名前に code/コードを含む」を OR で追加することで4カタログとも良好な精度を確認。
+  - `src/style.ts` の `buildStyle()` に `clickableLayerIds`(D23の汎用ベクトルサブレイヤー + D39の `styleLayerIds` の合併、常時描画のbvmap背景は除外)を新設。`src/render.ts` に `isInternalPropertyKey`/`shouldShowProperty`/`buildPopupHtml` とクリックハンドラを追加、`index.html` に `.panel` と同じDADSトークンでポップアップをスタイリング。
+  - ブラウザで実際に検証: 火山土地条件図の例(D39)で有珠山周辺の実VLCMフィーチャーをクリックし、`name: 旧河道` のみを表示するポップアップを確認(`code`/`class`/`ID` 等は非表示)。常時描画のbvmap背景をクリックしてもポップアップが出ないことも確認。
+  - テスト9件追加(`src/style.test.ts` 3件、新規 `src/render.test.ts` 6件)、全101件パス。詳細は [DECISIONS.md D41](DECISIONS.md#d41-フィーチャークリックでの属性ポップアップを実装するnumber型-or-codeコードという名前-のor-ヒューリスティックで一般向けキーに絞る) を参照。
+  - **次の担当者へのフォローアップ(未着手)**: 特になし。既知の限界として、標高・水深など数値型だが一般向けの値がヒューリスティックにより誤って隠れる(false-hide)ケースがある。実用上問題になった場合は、TileJSON `vector_layers[].fields` の型宣言をキー単位の許可/拒否リストとして併用する拡張を検討。
 
 - **2026-07-21: Map Intent に `required_styles`/`optional_styles` を追加(D39、Issue #6、実装完了)**
   - `source_id` の寄せ集めではなく、Martin サーバーが公開する完成済みスタイル(`GET {base}/style/{style_id}`)を Map Intent から直接参照できるようにした。`StyleRef`/`ResolvedStyle`/`PublishedStyle` 型を追加し、`resolveStyles()`(`catalog.ts`)・`buildStyle()` のスタイルマージ(`style.ts`)・パネルのスタイル用チェックボックス(`render.ts`)を実装。
@@ -49,10 +57,10 @@ Cartographer は複数の Staff・複数の Library カタログと組み合わ�
     - `curl https://stars.optgeo.org/style/vlcm`・`/style/vbm` で実配信を確認。`catalog.test.ts` の統合テストをモック無しの実サーバー確認に更新(46件パス)、ブラウザでも恵山周辺の実データで GSI 凡例通りの色分け描画を確認済み。
     - `/catalog` 一覧表示は Cloudflare キャッシュ(最大4時間)により一時的に古い状態が残ることがあるが、`/style/{id}` 自体・Cartographer の解決処理には影響しない。
   - **2026-07-21 追記2: フォローアップ2件とも対応完了**
-    - `UNopenGIS/staccato-spec` へ ADR 0007 を提案([UNopenGIS/staccato-spec#4](https://github.com/UNopenGIS/staccato-spec/pull/4))。
+    - `UNopenGIS/staccato-spec` へ ADR 0007 を提案([UNopenGIS/staccato-spec#4](https://github.com/UNopenGIS/staccato-spec/pull/4)、2026-07-21マージ済み)。
     - `EXAMPLE_MAP_INTENT` は単純置き換えではなく、複数の Example Map Intent をドロップダウンで切り替えられる方式(D40)にした。切り替える前に、`hfu/layers-martin` の `STAFF_PROMPT.md` を実際に更新して `required_styles` を教え、独立エージェントに(プロンプト自身の例とは異なる「恵山」で)Staff を演じさせて `required_styles` が正しく生成されることを実証してから実装した。詳細は [DECISIONS.md D40](DECISIONS.md#d40-フォーム初期値を複数の-example-map-intent-からドロップダウンで選択可能にする)を参照。
     - `scripts/eval-intent.ts` を `resolveStyles` にも対応するよう拡張、`scripts/example-intents/` に07・08を追加(スイート8/8合格)。
-  - **次の担当者へのフォローアップ(未着手)**: 特になし。強いて言えば、`UNopenGIS/staccato-spec` ADR 0007・PR #4 のメンテナー側レビュー待ち。
+  - **次の担当者へのフォローアップ(未着手)**: 特になし。`UNopenGIS/staccato-spec` ADR 0007(PR #4)は2026-07-21にマージ済み、ADR 0003(PR #1)も2026-07-07にマージ済みで、いずれも未解決の外部依存は残っていない。
 
 - **2026-07-10: UI 整理 — 左パネル折りたたみ化・凡例統合・Layer Control 移設(D33、実装完了)**
   - 左上の `.panel` に折りたたみボタンを追加、クリックで左側に最小化(2.75×2.75rem 表示)。展開時は既存レイアウト(max-width 22rem)を維持。マップ表示面積を効率的に活用。
